@@ -210,7 +210,7 @@ bool SymbolTableImpl::Write(std::ostream &strm) const {
     WriteType(strm, symbols_.GetSymbol(i));
     WriteType(strm, key);
   }
-  strm.flush();
+  // strm.flush();
   if (strm.fail()) {
     LOG(ERROR) << "SymbolTable::Write: Write failed";
     return false;

@@ -313,15 +313,15 @@ class LookAheadMatcher<MatcherFst<F, M, Name, Init>> {
 
 // Useful aliases when using StdArc.
 
-extern const char arc_lookahead_fst_type[];
+extern OPENFSTDLL const char arc_lookahead_fst_type[];
 
 using StdArcLookAheadFst =
     MatcherFst<ConstFst<StdArc>,
                ArcLookAheadMatcher<SortedMatcher<ConstFst<StdArc>>>,
                arc_lookahead_fst_type>;
 
-extern const char ilabel_lookahead_fst_type[];
-extern const char olabel_lookahead_fst_type[];
+extern const char OPENFSTDLL ilabel_lookahead_fst_type[];
+extern const char OPENFSTDLL olabel_lookahead_fst_type[];
 
 constexpr auto ilabel_lookahead_flags =
     kInputLookAheadMatcher | kLookAheadWeight | kLookAheadPrefix |

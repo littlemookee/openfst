@@ -61,15 +61,24 @@ class ExpandedFst : public Fst<A> {
   // Empty filename reads from standard input.
   static ExpandedFst<Arc> *Read(const string &filename) {
     if (!filename.empty()) {
-      std::ifstream strm(filename,
-                              std::ios_base::in | std::ios_base::binary);
+      crypt_ifstream<char> crStream(filename, std::ios_base::in | std::ios_base::binary);
+      std::string data((std::istreambuf_iterator<char>(crStream)),
+                   std::istreambuf_iterator<char>());
+      std::istringstream strm(data);
+      // std::ifstream strm(filename,
+      //                         std::ios_base::in | std::ios_base::binary);
       if (!strm) {
         LOG(ERROR) << "ExpandedFst::Read: Can't open file: " << filename;
         return nullptr;
       }
       return Read(strm, FstReadOptions(filename));
     } else {
-      return Read(std::cin, FstReadOptions("standard input"));
+      crypt_stdistream<char> crStream;
+      std::string data((std::istreambuf_iterator<char>(crStream)),
+                   std::istreambuf_iterator<char>());
+      std::istringstream istrm(data);
+      return Read(istrm, FstReadOptions("standard input"));
+      // return Read(std::cin, FstReadOptions("standard input"));
     }
   }
 };
@@ -139,15 +148,21 @@ class ImplToExpandedFst : public ImplToFst<Impl, FST> {
   // Empty filename reads from standard input.
   static Impl *Read(const string &filename) {
     if (!filename.empty()) {
-      std::ifstream strm(filename,
-                              std::ios_base::in | std::ios_base::binary);
+      crypt_ifstream<char> crStream(filename, std::ios_base::in | std::ios_base::binary);
+      std::string data((std::istreambuf_iterator<char>(crStream)),
+                   std::istreambuf_iterator<char>());
+      std::istringstream strm(data);
       if (!strm) {
         LOG(ERROR) << "ExpandedFst::Read: Can't open file: " << filename;
         return nullptr;
       }
       return Impl::Read(strm, FstReadOptions(filename));
     } else {
-      return Impl::Read(std::cin, FstReadOptions("standard input"));
+      crypt_stdistream<char> crStream;
+      std::string data((std::istreambuf_iterator<char>(crStream)),
+                   std::istreambuf_iterator<char>());
+      std::istringstream istrm(data);
+      return Impl::Read(istrm, FstReadOptions("standard input"));
     }
   }
 };

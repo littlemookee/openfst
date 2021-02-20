@@ -2,6 +2,7 @@
 *
 !*.*
 !*/
+!Makefile
 
 # Other patterns
 /config.h

@@ -124,7 +124,7 @@ am__installdirs = "$(DESTDIR)$(libdir)"
 LTLIBRARIES = $(lib_LTLIBRARIES)
 am__DEPENDENCIES_1 =
 libfst_la_DEPENDENCIES = $(am__DEPENDENCIES_1)
-am_libfst_la_OBJECTS = compat.lo flags.lo fst.lo properties.lo \
+am_libfst_la_OBJECTS = shm.lo compat.lo flags.lo fst.lo properties.lo \
 	symbol-table.lo util.lo symbol-table-ops.lo mapped-file.lo \
 	weight.lo
 libfst_la_OBJECTS = $(am_libfst_la_OBJECTS)
@@ -323,6 +323,7 @@ program_transform_name = @program_transform_name@
 psdir = @psdir@
 pyexecdir = @pyexecdir@
 pythondir = @pythondir@
+runstatedir = @runstatedir@
 sbindir = @sbindir@
 sharedstatedir = @sharedstatedir@
 srcdir = @srcdir@
@@ -331,12 +332,12 @@ target_alias = @target_alias@
 top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
-AM_CPPFLAGS = -I$(srcdir)/../include $(ICU_CPPFLAGS)
+AM_CPPFLAGS = -I$(srcdir)/../include $(ICU_CPPFLAGS) -I$(abs_top_srcdir)/../../src
 lib_LTLIBRARIES = libfst.la
-libfst_la_SOURCES = compat.cc flags.cc fst.cc properties.cc symbol-table.cc util.cc \
+libfst_la_SOURCES = shm.cc compat.cc flags.cc fst.cc properties.cc symbol-table.cc util.cc \
                     symbol-table-ops.cc mapped-file.cc weight.cc
 
-libfst_la_LDFLAGS = -version-info 8:0:0
+libfst_la_LDFLAGS = -version-info 8:0:0 -lpthread -lrt
 libfst_la_LIBADD = $(DL_LIBS)
 all: all-am
 
@@ -422,6 +423,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/fst.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/mapped-file.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/properties.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/shm.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/symbol-table-ops.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/symbol-table.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/util.Plo@am__quote@

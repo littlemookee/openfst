@@ -74,18 +74,21 @@ class CustomCompactor {
   }
 };
 
+#ifndef _MSC_VER
 REGISTER_FST(VectorFst, CustomArc);
 REGISTER_FST(ConstFst, CustomArc);
+#endif
 static fst::FstRegisterer<CompactFst<StdArc, CustomCompactor<StdArc>>>
     CompactFst_StdArc_CustomCompactor_registerer;
+#ifndef _MSC_VER
 static fst::FstRegisterer<CompactFst<CustomArc, CustomCompactor<CustomArc>>>
     CompactFst_CustomArc_CustomCompactor_registerer;
+#endif
 static fst::FstRegisterer<ConstFst<StdArc, uint16>>
     ConstFst_StdArc_uint16_registerer;
 static fst::FstRegisterer<
     CompactFst<StdArc, CustomCompactor<StdArc>, uint16>>
     CompactFst_StdArc_CustomCompactor_uint16_registerer;
-
 }  // namespace
 }  // namespace fst
 
@@ -96,7 +99,9 @@ using fst::MatcherFst;
 using fst::CompactFst;
 using fst::Fst;
 using fst::StdArc;
+#ifndef _MSC_VER
 using fst::CustomArc;
+#endif
 using fst::CustomCompactor;
 using fst::StdArcLookAheadFst;
 using fst::EditFst;
@@ -126,6 +131,7 @@ int main(int argc, char **argv) {
     std_const_tester.TestIO();
   }
 
+#ifndef _MSC_VER
   // CompactFst<StdArc, CustomCompactor<StdArc>>
   {
     FstTester<CompactFst<StdArc, CustomCompactor<StdArc>>> std_compact_tester;
@@ -134,7 +140,6 @@ int main(int argc, char **argv) {
     std_compact_tester.TestCopy();
     std_compact_tester.TestIO();
   }
-
   // VectorFst<CustomArc> tests
   {
     FstTester<VectorFst<CustomArc>> std_vector_tester;
@@ -164,7 +169,7 @@ int main(int argc, char **argv) {
     std_compact_tester.TestCopy();
     std_compact_tester.TestIO();
   }
-
+#endif
   // ConstFst<StdArc, uint16> tests
   {
     FstTester<ConstFst<StdArc, uint16>> std_const_tester;
@@ -174,6 +179,7 @@ int main(int argc, char **argv) {
     std_const_tester.TestIO();
   }
 
+#ifndef _MSC_VER
   // CompactFst<StdArc, CustomCompactor<StdArc>, uint16>
   {
     FstTester<CompactFst<StdArc, CustomCompactor<StdArc>, uint16>>
@@ -183,6 +189,7 @@ int main(int argc, char **argv) {
     std_compact_tester.TestCopy();
     std_compact_tester.TestIO();
   }
+#endif
 
   // FstTester<StdArcLookAheadFst>
   {

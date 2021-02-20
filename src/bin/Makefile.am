@@ -1,5 +1,6 @@
-AM_CPPFLAGS = -I$(srcdir)/../include -I$(srcdir)/../script $(ICU_FLAGS)
-LDADD = ../script/libfstscript.la ../lib/libfst.la -lm $(DL_LIBS)
+AM_CPPFLAGS = -I$(srcdir)/../include -I$(srcdir)/../script $(ICU_FLAGS) -I$(abs_top_srcdir)/../../src
+LDADD = ../script/libfstscript.la ../lib/libfst.la -lm $(DL_LIBS) -l:libgrdapi.a -lpthread
+AM_LDFLAGS = -L$(abs_top_srcdir)/../../lib/linux
 
 if HAVE_BIN
 bin_PROGRAMS = fstarcsort fstclosure fstcompile fstcompose fstconcat \

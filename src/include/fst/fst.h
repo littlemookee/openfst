@@ -29,6 +29,7 @@
 #include <fst/register.h>
 #include <fst/symbol-table.h>
 #include <fst/util.h>
+#include <kaldi-crypt.h>
 
 
 DECLARE_bool(fst_align);
@@ -64,6 +65,7 @@ struct FstReadOptions {
   FileReadMode mode;            // Read or map files (advisory, if possible)
   bool read_isymbols;           // Read isymbols, if any (default: true).
   bool read_osymbols;           // Read osymbols, if any (default: true).
+  string md5;			// SHARED_MEMORY
 
   explicit FstReadOptions(const string &source = "<unspecified>",
                           const FstHeader *header = nullptr,
@@ -301,7 +303,7 @@ class Fst {
  protected:
   bool WriteFile(const string &filename) const {
     if (!filename.empty()) {
-      std::ofstream strm(filename,
+      crypt_ofstream<char> strm(filename,
                                std::ios_base::out | std::ios_base::binary);
       if (!strm) {
         LOG(ERROR) << "Fst::Write: Can't open file: " << filename;
@@ -311,7 +313,8 @@ class Fst {
       if (!val) LOG(ERROR) << "Fst::Write failed: " << filename;
       return val;
     } else {
-      return Write(std::cout, FstWriteOptions("standard output"));
+      crypt_stdostream<char> ostrm;
+      return Write(ostrm, FstWriteOptions("standard output"));
     }
   }
 };

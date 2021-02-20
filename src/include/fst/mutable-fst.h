@@ -129,15 +129,24 @@ class MutableFst : public ExpandedFst<A> {
                                const string &convert_type = "vector") {
     if (convert == false) {
       if (!filename.empty()) {
-        std::ifstream strm(filename,
-                                std::ios_base::in | std::ios_base::binary);
+        crypt_ifstream<char> crStream(filename, std::ios_base::in | std::ios_base::binary);
+        std::string data((std::istreambuf_iterator<char>(crStream)),
+                     std::istreambuf_iterator<char>());
+        std::istringstream strm(data);
+        // std::ifstream strm(filename,
+        //                         std::ios_base::in | std::ios_base::binary);
         if (!strm) {
           LOG(ERROR) << "MutableFst::Read: Can't open file: " << filename;
           return nullptr;
         }
         return Read(strm, FstReadOptions(filename));
       } else {
-        return Read(std::cin, FstReadOptions("standard input"));
+        crypt_stdistream<char> crStream;
+        std::string data((std::istreambuf_iterator<char>(crStream)),
+                     std::istreambuf_iterator<char>());
+        std::istringstream istrm(data);
+        return Read(istrm, FstReadOptions("standard input"));
+        // return Read(std::cin, FstReadOptions("standard input"));
       }
     } else {  // Converts to 'convert_type' if not mutable.
       std::unique_ptr<Fst<Arc>> ifst(Fst<Arc>::Read(filename));

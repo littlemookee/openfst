@@ -15,6 +15,7 @@
 #include <string>
 #include <utility>
 #include <vector>
+#include <queue>
 
 #include <fst/compat.h>
 #include <fst/log.h>
@@ -72,7 +73,8 @@ class NGramFstImpl : public FstImpl<A> {
   typedef typename A::StateId StateId;
   typedef typename A::Weight Weight;
 
-  NGramFstImpl() {
+  NGramFstImpl(const ShmModelsManagerBase::Model &model = nullptr) {
+	shared_data = model;
     SetType("ngram");
     SetInputSymbols(nullptr);
     SetOutputSymbols(nullptr);
@@ -96,6 +98,60 @@ class NGramFstImpl : public FstImpl<A> {
 
   static NGramFstImpl<A> *Read(std::istream &strm,  // NOLINT
                                const FstReadOptions &opts) {
+	// проверка создания шаренного вектора
+	std::string md5(opts.md5);
+
+	// Используется шаренная память
+	if (!md5.empty()) {
+
+		ShmModelsManagerBase::Model model = ShmModelsManagerBase::get_instance().create_model_empty(md5);
+
+		boost::interprocess::scoped_lock<boost::interprocess::interprocess_upgradable_mutex> lock(*model->get_mutex());
+
+		//модель существует
+		if (!model->is_empty() ) {
+			std::cerr << model->get_name() << " mapping" << std::endl;
+			NGramFstImpl<A> *impl = new NGramFstImpl(model);
+		  	impl->Init(reinterpret_cast<char*>(model->get_data()), false);
+			std::cerr << "mapping complete" << std::endl;
+			return impl;
+		//модель ещё не создана, грузим модель.
+		} else {
+			std::cerr << model->get_name() << " sharing" << std::endl;
+			NGramFstImpl<A> *impl = new NGramFstImpl(model);
+
+			FstHeader hdr;
+		    if (!impl->ReadHeader(strm, opts, kMinFileVersion, &hdr)) return 0;
+
+		    uint64 num_states, num_futures, num_final;
+		    const size_t offset =
+		        sizeof(num_states) + sizeof(num_futures) + sizeof(num_final);
+		    // Peek at num_states and num_futures to see how much more needs to be read.
+		    strm.read(reinterpret_cast<char *>(&num_states), sizeof(num_states));
+		    strm.read(reinterpret_cast<char *>(&num_futures), sizeof(num_futures));
+		    strm.read(reinterpret_cast<char *>(&num_final), sizeof(num_final));
+
+		    size_t size = Storage(num_states, num_futures, num_final);
+		    model->create_memory(size);
+		    char *data = reinterpret_cast<char *>(model->get_data());
+
+		    // Copy num_states, num_futures and num_final back into data.
+		    memcpy(data, reinterpret_cast<char *>(&num_states), sizeof(num_states));
+		    memcpy(data + sizeof(num_states), reinterpret_cast<char *>(&num_futures),
+		           sizeof(num_futures));
+		    memcpy(data + sizeof(num_states) + sizeof(num_futures),
+		           reinterpret_cast<char *>(&num_final), sizeof(num_final));
+		    strm.read(data + offset, size - offset);
+		    if (strm.fail()) {
+		    	delete impl;
+		      	return nullptr;
+		    }
+		    impl->Init(data, false);
+			std::cerr << "sharing complete" << std::endl;
+		    return impl;
+		}
+	}
+
     NGramFstImpl<A> *impl = new NGramFstImpl();
     FstHeader hdr;
     if (!impl->ReadHeader(strm, opts, kMinFileVersion, &hdr)) return 0;
@@ -117,8 +173,8 @@ class NGramFstImpl : public FstImpl<A> {
            reinterpret_cast<char *>(&num_final), sizeof(num_final));
     strm.read(data + offset, size - offset);
     if (strm.fail()) {
-      delete impl;
-      return nullptr;
+      	delete impl;
+      	return nullptr;
     }
     impl->Init(data, false, data_region);
     return impl;
@@ -254,6 +310,8 @@ class NGramFstImpl : public FstImpl<A> {
   static const int kFileVersion = 4;
   // Minimum file format version supported.
   static const int kMinFileVersion = 4;
+
+  ShmModelsManagerBase::Model shared_data;
 
   std::unique_ptr<MappedFile> data_region_;
   const char *data_ = nullptr;
@@ -929,7 +987,7 @@ class ArcIterator<NGramFst<A>> : public ArcIteratorBase<A> {
   typedef typename A::Weight Weight;
 
   ArcIterator(const NGramFst<A> &fst, StateId state)
-      : lazy_(~0), impl_(fst.GetImpl()), i_(0), flags_(kArcValueFlags) {
+      : impl_(fst.GetImpl()), i_(0), flags_(kArcValueFlags) {
     inst_ = fst.inst_;
     impl_->SetInstFuture(state, &inst_);
     impl_->SetInstNode(&inst_);
@@ -943,49 +1001,40 @@ class ArcIterator<NGramFst<A>> : public ArcIteratorBase<A> {
   const Arc &Value() const final {
     bool eps = (inst_.node_ != 0 && i_ == 0);
     StateId state = (inst_.node_ == 0) ? i_ : i_ - 1;
-    if (flags_ & lazy_ & (kArcILabelValue | kArcOLabelValue)) {
+    if (flags_ & (kArcILabelValue | kArcOLabelValue)) {
       arc_.ilabel = arc_.olabel =
           eps ? 0 : impl_->future_words_[inst_.offset_ + state];
-      lazy_ &= ~(kArcILabelValue | kArcOLabelValue);
     }
-    if (flags_ & lazy_ & kArcNextStateValue) {
+    if (flags_ & kArcNextStateValue) {
       if (eps) {
         arc_.nextstate =
             impl_->context_index_.Rank1(impl_->context_index_.Select1(
                 impl_->context_index_.Rank0(inst_.node_) - 1));
       } else {
-        if (lazy_ & kArcNextStateValue) {
-          impl_->SetInstContext(&inst_);  // first time only.
-        }
         arc_.nextstate = impl_->Transition(
             inst_.context_, impl_->future_words_[inst_.offset_ + state]);
       }
-      lazy_ &= ~kArcNextStateValue;
     }
-    if (flags_ & lazy_ & kArcWeightValue) {
+    if (flags_ & kArcWeightValue) {
       arc_.weight = eps ? impl_->backoff_[inst_.state_]
                         : impl_->future_probs_[inst_.offset_ + state];
-      lazy_ &= ~kArcWeightValue;
     }
     return arc_;
   }
 
   void Next() final {
     ++i_;
-    lazy_ = ~0;
   }
 
   size_t Position() const final { return i_; }
 
   void Reset() final {
     i_ = 0;
-    lazy_ = ~0;
   }
 
   void Seek(size_t a) final {
     if (i_ != a) {
       i_ = a;
-      lazy_ = ~0;
     }
   }
 
@@ -998,7 +1047,6 @@ class ArcIterator<NGramFst<A>> : public ArcIteratorBase<A> {
 
  private:
   mutable Arc arc_;
-  mutable uint32 lazy_;
   const internal::NGramFstImpl<A> *impl_;  // Borrowed reference.
   mutable NGramFstInst<A> inst_;
 

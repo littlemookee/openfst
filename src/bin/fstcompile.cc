@@ -13,6 +13,8 @@
 #include <fst/log.h>
 #include <fst/script/compile.h>
 
+#include <kaldi-crypt.h>
+
 DEFINE_bool(acceptor, false, "Input in acceptor format");
 DEFINE_string(arc_type, "standard", "Output arc type");
 DEFINE_string(fst_type, "vector", "Output FST type");
@@ -24,6 +26,7 @@ DEFINE_bool(keep_osymbols, false, "Store output label symbol table with FST");
 DEFINE_bool(keep_state_numbering, false, "Do not renumber input states");
 DEFINE_bool(allow_negative_labels, false,
             "Allow negative labels (not recommended; may cause conflicts)");
+
 
 int main(int argc, char **argv) {
   namespace s = fst::script;
@@ -42,7 +45,9 @@ int main(int argc, char **argv) {
   }
 
   string source = "standard input";
-  std::ifstream fstrm;
+
+  crypt_ifstream<char> fstrm;
+
   if (argc > 1 && strcmp(argv[1], "-") != 0) {
     fstrm.open(argv[1]);
     if (!fstrm) {
@@ -51,7 +56,12 @@ int main(int argc, char **argv) {
     }
     source = argv[1];
   }
-  std::istream &istrm = fstrm.is_open() ? fstrm : std::cin;
+
+  std::istream &istrm = fstrm.is_open() ? static_cast<std::istream&>(fstrm) : static_cast<std::istream&>(*(new crypt_stdistream<char>()));
+  // if (!fstrm.is_open()) {
+  //   crypt_stdistream<char> crypt_stdin;
+  //   istrm = static_cast<std::istream&>(crypt_stdin);
+  // }
 
   const SymbolTableTextOptions opts(FLAGS_allow_negative_labels);
 

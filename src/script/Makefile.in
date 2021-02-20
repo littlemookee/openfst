@@ -349,6 +349,7 @@ program_transform_name = @program_transform_name@
 psdir = @psdir@
 pyexecdir = @pyexecdir@
 pythondir = @pythondir@
+runstatedir = @runstatedir@
 sbindir = @sbindir@
 sharedstatedir = @sharedstatedir@
 srcdir = @srcdir@
@@ -357,7 +358,7 @@ target_alias = @target_alias@
 top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
-AM_CPPFLAGS = -I$(srcdir)/../include $(ICU_CPPFLAGS)
+AM_CPPFLAGS = -I$(srcdir)/../include $(ICU_CPPFLAGS) -I$(abs_top_srcdir)/../../src
 @HAVE_SCRIPT_TRUE@lib_LTLIBRARIES = libfstscript.la
 @HAVE_SCRIPT_TRUE@libfstscript_la_SOURCES = arciterator-class.cc arcsort.cc closure.cc        \
 @HAVE_SCRIPT_TRUE@compile.cc compose.cc concat.cc connect.cc convert.cc decode.cc             \

@@ -18,6 +18,7 @@
 
 #include <fst/arc-map.h>
 #include <fst/rmfinalepsilon.h>
+#include <kaldi-crypt.h>
 
 
 namespace fst {
@@ -190,7 +191,7 @@ bool EncodeTable<Arc>::Write(std::ostream &strm,
   }
   if (flags_ & kEncodeHasISymbols) isymbols_->Write(strm);
   if (flags_ & kEncodeHasOSymbols) osymbols_->Write(strm);
-  strm.flush();
+  // strm.flush();
   if (!strm) {
     LOG(ERROR) << "EncodeTable::Write: Write failed: " << source;
     return false;
@@ -321,7 +322,7 @@ class EncodeMapper {
   }
 
   bool Write(const string &filename) const {
-    std::ofstream strm(filename,
+    crypt_ofstream<char> strm(filename,
                              std::ios_base::out | std::ios_base::binary);
     if (!strm) {
       LOG(ERROR) << "EncodeMap: Can't open file: " << filename;

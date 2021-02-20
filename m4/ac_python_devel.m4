@@ -34,6 +34,9 @@ dnl @author Matteo Settenvini <matteo@member.fsf.org>
 dnl @author Horst Knorr <hk_classes@knoda.org>
 dnl @version 2006-05-27
 dnl @license GPLWithACException
+dnl
+dnl LAST MODIFICATION 2008-04-12
+dnl
 
 AC_DEFUN([AC_PYTHON_DEVEL],[
 	#
@@ -54,9 +57,9 @@ AC_DEFUN([AC_PYTHON_DEVEL],[
 	# Check for a version of Python >= 2.1.0
 	#
 	AC_MSG_CHECKING([for a version of Python >= '2.1.0'])
-	ac_supports_python_ver=`$PYTHON -c "import sys, string; \
-		ver = string.split(sys.version)[[0]]; \
-		print ver >= '2.1.0'"`
+	ac_supports_python_ver=`$PYTHON -c "import sys; \
+		ver = sys.version.split()[[0]]; \
+		print(ver >= '2.1.0')"`
 	if test "$ac_supports_python_ver" != "True"; then
 		if test -z "$PYTHON_NOVERSIONCHECK"; then
 			AC_MSG_RESULT([no])
@@ -81,9 +84,9 @@ to something else than an empty string.
 	#
 	if test -n "$1"; then
 		AC_MSG_CHECKING([for a version of Python $1])
-		ac_supports_python_ver=`$PYTHON -c "import sys, string; \
-			ver = string.split(sys.version)[[0]]; \
-			print ver $1"`
+		ac_supports_python_ver=`$PYTHON -c "import sys; \
+			ver = sys.version.split()[[0]]; \
+			print(ver >= '2.1.0')"`
 		if test "$ac_supports_python_ver" = "True"; then
 	   	   AC_MSG_RESULT([yes])
 		else
@@ -116,9 +119,12 @@ $ac_distutils_result])
 	# Check for Python include path
 	#
 	AC_MSG_CHECKING([for Python include path])
+	if type $PYTHON-config; then
+		PYTHON_CPPFLAGS=`$PYTHON-config --includes`
+	fi
 	if test -z "$PYTHON_CPPFLAGS"; then
 		python_path=`$PYTHON -c "import distutils.sysconfig; \
-           		print distutils.sysconfig.get_python_inc();"`
+			print(distutils.sysconfig.get_python_inc());"`
 		if test -n "${python_path}"; then
 		   	python_path="-I$python_path"
 		fi
@@ -131,25 +137,25 @@ $ac_distutils_result])
 	# Check for Python library path
 	#
 	AC_MSG_CHECKING([for Python library path])
+	if type $PYTHON-config; then
+		PYTHON_LDFLAGS=`$PYTHON-config --ldflags | sed 's|^\(.*\)-lpython\([[^ ]]*\) \(.*\)$|\1 \3|g'`
+	fi
 	if test -z "$PYTHON_LDFLAGS"; then
 		# (makes two attempts to ensure we've got a version number
 		# from the interpreter)
 		py_version=`$PYTHON -c "from distutils.sysconfig import *; \
-			from string import join; \
-			print join(get_config_vars('VERSION'))"`
-		if test "$py_version" == "[None]"; then
+			print(' '.join(get_config_vars('VERSION')))"`
+		if test "$py_version" = "[None]"; then
 			if test -n "$PYTHON_VERSION"; then
 				py_version=$PYTHON_VERSION
 			else
 				py_version=`$PYTHON -c "import sys; \
-					print sys.version[[:3]]"`
+					print(sys.version[[:3]]")`
 			fi
 		fi
 
 		PYTHON_LDFLAGS=`$PYTHON -c "from distutils.sysconfig import *; \
-			from string import join; \
-			print '-L' + get_python_lib(0,1), \
-		      	'-lpython';"`$py_version
+			print('-L' + get_python_lib(0,1));"`$py_version
 	fi
 	AC_MSG_RESULT([$PYTHON_LDFLAGS])
 	AC_SUBST([PYTHON_LDFLAGS])
@@ -160,7 +166,7 @@ $ac_distutils_result])
 	AC_MSG_CHECKING([for Python site-packages path])
 	if test -z "$PYTHON_SITE_PKG"; then
 		PYTHON_SITE_PKG=`$PYTHON -c "import distutils.sysconfig; \
-		        print distutils.sysconfig.get_python_lib(0,0);"`
+			print(distutils.sysconfig.get_python_lib(0,0))"`
 	fi
 	AC_MSG_RESULT([$PYTHON_SITE_PKG])
 	AC_SUBST([PYTHON_SITE_PKG])
@@ -172,7 +178,7 @@ $ac_distutils_result])
 	if test -z "$PYTHON_EXTRA_LIBS"; then
 	   PYTHON_EXTRA_LIBS=`$PYTHON -c "import distutils.sysconfig; \
                 conf = distutils.sysconfig.get_config_var; \
-                print conf('LOCALMODLIBS'), conf('LIBS')"`
+                print(conf('LOCALMODLIBS'), conf('LIBS'))"`
 	fi
 	AC_MSG_RESULT([$PYTHON_EXTRA_LIBS])
 	AC_SUBST(PYTHON_EXTRA_LIBS)
@@ -184,42 +190,11 @@ $ac_distutils_result])
 	if test -z "$PYTHON_EXTRA_LDFLAGS"; then
 		PYTHON_EXTRA_LDFLAGS=`$PYTHON -c "import distutils.sysconfig; \
 			conf = distutils.sysconfig.get_config_var; \
-			print conf('LINKFORSHARED')"`
+			print(conf('LINKFORSHARED'))"`
 	fi
 	AC_MSG_RESULT([$PYTHON_EXTRA_LDFLAGS])
 	AC_SUBST(PYTHON_EXTRA_LDFLAGS)
 
-	#
-	# final check to see if everything compiles alright
-	#
-	AC_MSG_CHECKING([consistency of all components of python development environment])
-	AC_LANG_PUSH([C])
-	# save current global flags
-	LIBS="$ac_save_LIBS $PYTHON_LDFLAGS"
-	CPPFLAGS="$ac_save_CPPFLAGS $PYTHON_CPPFLAGS"
-	AC_TRY_LINK([
-		#include <Python.h>
-	],[
-		Py_Initialize();
-	],[pythonexists=yes],[pythonexists=no])
-
-	AC_MSG_RESULT([$pythonexists])
-
-        if test ! "$pythonexists" = "yes"; then
-	   AC_MSG_ERROR([
-  Could not link test program to Python. Maybe the main Python library has been
-  installed in some non-standard library path. If so, pass it to configure,
-  via the LDFLAGS environment variable.
-  Example: ./configure LDFLAGS="-L/usr/non-standard-path/python/lib"
-  ============================================================================
-   ERROR!
-   You probably have to install the development version of the Python package
-   for your distribution.  The exact name of this package varies among them.
-  ============================================================================
-	   ])
-	  PYTHON_VERSION=""
-	fi
-	AC_LANG_POP
 	# turn back to default flags
 	CPPFLAGS="$ac_save_CPPFLAGS"
 	LIBS="$ac_save_LIBS"

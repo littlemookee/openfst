@@ -1,0 +1,2220 @@
+diff --git a/.gitignore b/.gitignore
+index bd5b6e8..28c23d3 100644
+--- a/.gitignore
++++ b/.gitignore
+@@ -2,6 +2,7 @@
+ *
+ !*.*
+ !*/
++!Makefile
+ 
+ # Other patterns
+ /config.h
+diff --git a/Makefile.in b/Makefile.in
+index 59c4323..2e0b631 100644
+--- a/Makefile.in
++++ b/Makefile.in
+@@ -323,6 +323,7 @@ program_transform_name = @program_transform_name@
+ psdir = @psdir@
+ pyexecdir = @pyexecdir@
+ pythondir = @pythondir@
++runstatedir = @runstatedir@
+ sbindir = @sbindir@
+ sharedstatedir = @sharedstatedir@
+ srcdir = @srcdir@
+diff --git a/configure b/configure
+index cccaa19..efd3fe8 100755
+--- a/configure
++++ b/configure
+@@ -780,6 +780,7 @@ infodir
+ docdir
+ oldincludedir
+ includedir
++runstatedir
+ localstatedir
+ sharedstatedir
+ sysconfdir
+@@ -879,6 +880,7 @@ datadir='${datarootdir}'
+ sysconfdir='${prefix}/etc'
+ sharedstatedir='${prefix}/com'
+ localstatedir='${prefix}/var'
++runstatedir='${localstatedir}/run'
+ includedir='${prefix}/include'
+ oldincludedir='/usr/include'
+ docdir='${datarootdir}/doc/${PACKAGE_TARNAME}'
+@@ -1131,6 +1133,15 @@ do
+   | -silent | --silent | --silen | --sile | --sil)
+     silent=yes ;;
+ 
++  -runstatedir | --runstatedir | --runstatedi | --runstated \
++  | --runstate | --runstat | --runsta | --runst | --runs \
++  | --run | --ru | --r)
++    ac_prev=runstatedir ;;
++  -runstatedir=* | --runstatedir=* | --runstatedi=* | --runstated=* \
++  | --runstate=* | --runstat=* | --runsta=* | --runst=* | --runs=* \
++  | --run=* | --ru=* | --r=*)
++    runstatedir=$ac_optarg ;;
++
+   -sbindir | --sbindir | --sbindi | --sbind | --sbin | --sbi | --sb)
+     ac_prev=sbindir ;;
+   -sbindir=* | --sbindir=* | --sbindi=* | --sbind=* | --sbin=* \
+@@ -1268,7 +1279,7 @@ fi
+ for ac_var in	exec_prefix prefix bindir sbindir libexecdir datarootdir \
+ 		datadir sysconfdir sharedstatedir localstatedir includedir \
+ 		oldincludedir docdir infodir htmldir dvidir pdfdir psdir \
+-		libdir localedir mandir
++		libdir localedir mandir runstatedir
+ do
+   eval ac_val=\$$ac_var
+   # Remove trailing slashes.
+@@ -1421,6 +1432,7 @@ Fine tuning of the installation directories:
+   --sysconfdir=DIR        read-only single-machine data [PREFIX/etc]
+   --sharedstatedir=DIR    modifiable architecture-independent data [PREFIX/com]
+   --localstatedir=DIR     modifiable single-machine data [PREFIX/var]
++  --runstatedir=DIR       modifiable per-process data [LOCALSTATEDIR/run]
+   --libdir=DIR            object code libraries [EPREFIX/lib]
+   --includedir=DIR        C header files [PREFIX/include]
+   --oldincludedir=DIR     C header files for non-gcc [/usr/include]
+@@ -4147,7 +4159,7 @@ esac
+ # OpenFst does not throw exceptions, so we do not generate exception handling
+ # code. However, users are free to re-enable exception handling.
+ # OpenFst assumes char is unsigned; -fsigned-char is likely unsafe.
+-CPPFLAGS="$CPPFLAGS -fno-exceptions -funsigned-char"
++CPPFLAGS="$CPPFLAGS -funsigned-char"
+ CXXFLAGS="$CXXFLAGS -std=c++11"
+ 
+ ac_ext=cpp
+@@ -15823,9 +15835,9 @@ fi
+ 	#
+ 	{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for a version of Python >= '2.1.0'" >&5
+ $as_echo_n "checking for a version of Python >= '2.1.0'... " >&6; }
+-	ac_supports_python_ver=`$PYTHON -c "import sys, string; \
+-		ver = string.split(sys.version)[0]; \
+-		print ver >= '2.1.0'"`
++	ac_supports_python_ver=`$PYTHON -c "import sys; \
++		ver = sys.version.split()[0]; \
++		print(ver >= '2.1.0')"`
+ 	if test "$ac_supports_python_ver" != "True"; then
+ 		if test -z "$PYTHON_NOVERSIONCHECK"; then
+ 			{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+@@ -15857,9 +15869,9 @@ $as_echo "yes" >&6; }
+ 	if test -n ">= '2.7'"; then
+ 		{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for a version of Python >= '2.7'" >&5
+ $as_echo_n "checking for a version of Python >= '2.7'... " >&6; }
+-		ac_supports_python_ver=`$PYTHON -c "import sys, string; \
+-			ver = string.split(sys.version)[0]; \
+-			print ver >= '2.7'"`
++		ac_supports_python_ver=`$PYTHON -c "import sys; \
++			ver = sys.version.split()[0]; \
++			print(ver >= '2.1.0')"`
+ 		if test "$ac_supports_python_ver" = "True"; then
+ 	   	   { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+ $as_echo "yes" >&6; }
+@@ -15898,9 +15910,12 @@ $ac_distutils_result" "$LINENO" 5
+ 	#
+ 	{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for Python include path" >&5
+ $as_echo_n "checking for Python include path... " >&6; }
++	if type $PYTHON-config; then
++		PYTHON_CPPFLAGS=`$PYTHON-config --includes`
++	fi
+ 	if test -z "$PYTHON_CPPFLAGS"; then
+ 		python_path=`$PYTHON -c "import distutils.sysconfig; \
+-           		print distutils.sysconfig.get_python_inc();"`
++			print(distutils.sysconfig.get_python_inc());"`
+ 		if test -n "${python_path}"; then
+ 		   	python_path="-I$python_path"
+ 		fi
+@@ -15915,25 +15930,25 @@ $as_echo "$PYTHON_CPPFLAGS" >&6; }
+ 	#
+ 	{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for Python library path" >&5
+ $as_echo_n "checking for Python library path... " >&6; }
++	if type $PYTHON-config; then
++		PYTHON_LDFLAGS=`$PYTHON-config --ldflags | sed 's|^\(.*\)-lpython\([^ ]*\) \(.*\)$|\1 \3|g'`
++	fi
+ 	if test -z "$PYTHON_LDFLAGS"; then
+ 		# (makes two attempts to ensure we've got a version number
+ 		# from the interpreter)
+ 		py_version=`$PYTHON -c "from distutils.sysconfig import *; \
+-			from string import join; \
+-			print join(get_config_vars('VERSION'))"`
+-		if test "$py_version" == "None"; then
++			print(' '.join(get_config_vars('VERSION')))"`
++		if test "$py_version" = "None"; then
+ 			if test -n "$PYTHON_VERSION"; then
+ 				py_version=$PYTHON_VERSION
+ 			else
+ 				py_version=`$PYTHON -c "import sys; \
+-					print sys.version[:3]"`
++					print(sys.version[:3]")`
+ 			fi
+ 		fi
+ 
+ 		PYTHON_LDFLAGS=`$PYTHON -c "from distutils.sysconfig import *; \
+-			from string import join; \
+-			print '-L' + get_python_lib(0,1), \
+-		      	'-lpython';"`$py_version
++			print('-L' + get_python_lib(0,1));"`$py_version
+ 	fi
+ 	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $PYTHON_LDFLAGS" >&5
+ $as_echo "$PYTHON_LDFLAGS" >&6; }
+@@ -15946,7 +15961,7 @@ $as_echo "$PYTHON_LDFLAGS" >&6; }
+ $as_echo_n "checking for Python site-packages path... " >&6; }
+ 	if test -z "$PYTHON_SITE_PKG"; then
+ 		PYTHON_SITE_PKG=`$PYTHON -c "import distutils.sysconfig; \
+-		        print distutils.sysconfig.get_python_lib(0,0);"`
++			print(distutils.sysconfig.get_python_lib(0,0))"`
+ 	fi
+ 	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $PYTHON_SITE_PKG" >&5
+ $as_echo "$PYTHON_SITE_PKG" >&6; }
+@@ -15960,7 +15975,7 @@ $as_echo_n "checking python extra libraries... " >&6; }
+ 	if test -z "$PYTHON_EXTRA_LIBS"; then
+ 	   PYTHON_EXTRA_LIBS=`$PYTHON -c "import distutils.sysconfig; \
+                 conf = distutils.sysconfig.get_config_var; \
+-                print conf('LOCALMODLIBS'), conf('LIBS')"`
++                print(conf('LOCALMODLIBS'), conf('LIBS'))"`
+ 	fi
+ 	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $PYTHON_EXTRA_LIBS" >&5
+ $as_echo "$PYTHON_EXTRA_LIBS" >&6; }
+@@ -15974,72 +15989,12 @@ $as_echo_n "checking python extra linking flags... " >&6; }
+ 	if test -z "$PYTHON_EXTRA_LDFLAGS"; then
+ 		PYTHON_EXTRA_LDFLAGS=`$PYTHON -c "import distutils.sysconfig; \
+ 			conf = distutils.sysconfig.get_config_var; \
+-			print conf('LINKFORSHARED')"`
++			print(conf('LINKFORSHARED'))"`
+ 	fi
+ 	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $PYTHON_EXTRA_LDFLAGS" >&5
+ $as_echo "$PYTHON_EXTRA_LDFLAGS" >&6; }
+ 
+ 
+-	#
+-	# final check to see if everything compiles alright
+-	#
+-	{ $as_echo "$as_me:${as_lineno-$LINENO}: checking consistency of all components of python development environment" >&5
+-$as_echo_n "checking consistency of all components of python development environment... " >&6; }
+-	ac_ext=c
+-ac_cpp='$CPP $CPPFLAGS'
+-ac_compile='$CC -c $CFLAGS $CPPFLAGS conftest.$ac_ext >&5'
+-ac_link='$CC -o conftest$ac_exeext $CFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
+-ac_compiler_gnu=$ac_cv_c_compiler_gnu
+-
+-	# save current global flags
+-	LIBS="$ac_save_LIBS $PYTHON_LDFLAGS"
+-	CPPFLAGS="$ac_save_CPPFLAGS $PYTHON_CPPFLAGS"
+-	cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+-/* end confdefs.h.  */
+-
+-		#include <Python.h>
+-
+-int
+-main ()
+-{
+-
+-		Py_Initialize();
+-
+-  ;
+-  return 0;
+-}
+-_ACEOF
+-if ac_fn_c_try_link "$LINENO"; then :
+-  pythonexists=yes
+-else
+-  pythonexists=no
+-fi
+-rm -f core conftest.err conftest.$ac_objext \
+-    conftest$ac_exeext conftest.$ac_ext
+-
+-	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $pythonexists" >&5
+-$as_echo "$pythonexists" >&6; }
+-
+-        if test ! "$pythonexists" = "yes"; then
+-	   as_fn_error $? "
+-  Could not link test program to Python. Maybe the main Python library has been
+-  installed in some non-standard library path. If so, pass it to configure,
+-  via the LDFLAGS environment variable.
+-  Example: ./configure LDFLAGS=\"-L/usr/non-standard-path/python/lib\"
+-  ============================================================================
+-   ERROR!
+-   You probably have to install the development version of the Python package
+-   for your distribution.  The exact name of this package varies among them.
+-  ============================================================================
+-	   " "$LINENO" 5
+-	  PYTHON_VERSION=""
+-	fi
+-	ac_ext=cpp
+-ac_cpp='$CXXCPP $CPPFLAGS'
+-ac_compile='$CXX -c $CXXFLAGS $CPPFLAGS conftest.$ac_ext >&5'
+-ac_link='$CXX -o conftest$ac_exeext $CXXFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
+-ac_compiler_gnu=$ac_cv_cxx_compiler_gnu
+-
+ 	# turn back to default flags
+ 	CPPFLAGS="$ac_save_CPPFLAGS"
+ 	LIBS="$ac_save_LIBS"
+diff --git a/configure.ac b/configure.ac
+index 5724113..37de5f7 100644
+--- a/configure.ac
++++ b/configure.ac
+@@ -5,7 +5,7 @@ AM_PROG_AR
+ # OpenFst does not throw exceptions, so we do not generate exception handling
+ # code. However, users are free to re-enable exception handling.
+ # OpenFst assumes char is unsigned; -fsigned-char is likely unsafe.
+-CPPFLAGS="$CPPFLAGS -fno-exceptions -funsigned-char"
++CPPFLAGS="$CPPFLAGS -funsigned-char"
+ CXXFLAGS="$CXXFLAGS -std=c++11"
+ 
+ AC_PROG_CXX
+diff --git a/m4/ac_python_devel.m4 b/m4/ac_python_devel.m4
+index 4855156..51c5370 100644
+--- a/m4/ac_python_devel.m4
++++ b/m4/ac_python_devel.m4
+@@ -34,6 +34,9 @@ dnl @author Matteo Settenvini <matteo@member.fsf.org>
+ dnl @author Horst Knorr <hk_classes@knoda.org>
+ dnl @version 2006-05-27
+ dnl @license GPLWithACException
++dnl
++dnl LAST MODIFICATION 2008-04-12
++dnl
+ 
+ AC_DEFUN([AC_PYTHON_DEVEL],[
+ 	#
+@@ -54,9 +57,9 @@ AC_DEFUN([AC_PYTHON_DEVEL],[
+ 	# Check for a version of Python >= 2.1.0
+ 	#
+ 	AC_MSG_CHECKING([for a version of Python >= '2.1.0'])
+-	ac_supports_python_ver=`$PYTHON -c "import sys, string; \
+-		ver = string.split(sys.version)[[0]]; \
+-		print ver >= '2.1.0'"`
++	ac_supports_python_ver=`$PYTHON -c "import sys; \
++		ver = sys.version.split()[[0]]; \
++		print(ver >= '2.1.0')"`
+ 	if test "$ac_supports_python_ver" != "True"; then
+ 		if test -z "$PYTHON_NOVERSIONCHECK"; then
+ 			AC_MSG_RESULT([no])
+@@ -81,9 +84,9 @@ to something else than an empty string.
+ 	#
+ 	if test -n "$1"; then
+ 		AC_MSG_CHECKING([for a version of Python $1])
+-		ac_supports_python_ver=`$PYTHON -c "import sys, string; \
+-			ver = string.split(sys.version)[[0]]; \
+-			print ver $1"`
++		ac_supports_python_ver=`$PYTHON -c "import sys; \
++			ver = sys.version.split()[[0]]; \
++			print(ver >= '2.1.0')"`
+ 		if test "$ac_supports_python_ver" = "True"; then
+ 	   	   AC_MSG_RESULT([yes])
+ 		else
+@@ -116,9 +119,12 @@ $ac_distutils_result])
+ 	# Check for Python include path
+ 	#
+ 	AC_MSG_CHECKING([for Python include path])
++	if type $PYTHON-config; then
++		PYTHON_CPPFLAGS=`$PYTHON-config --includes`
++	fi
+ 	if test -z "$PYTHON_CPPFLAGS"; then
+ 		python_path=`$PYTHON -c "import distutils.sysconfig; \
+-           		print distutils.sysconfig.get_python_inc();"`
++			print(distutils.sysconfig.get_python_inc());"`
+ 		if test -n "${python_path}"; then
+ 		   	python_path="-I$python_path"
+ 		fi
+@@ -131,25 +137,25 @@ $ac_distutils_result])
+ 	# Check for Python library path
+ 	#
+ 	AC_MSG_CHECKING([for Python library path])
++	if type $PYTHON-config; then
++		PYTHON_LDFLAGS=`$PYTHON-config --ldflags | sed 's|^\(.*\)-lpython\([[^ ]]*\) \(.*\)$|\1 \3|g'`
++	fi
+ 	if test -z "$PYTHON_LDFLAGS"; then
+ 		# (makes two attempts to ensure we've got a version number
+ 		# from the interpreter)
+ 		py_version=`$PYTHON -c "from distutils.sysconfig import *; \
+-			from string import join; \
+-			print join(get_config_vars('VERSION'))"`
+-		if test "$py_version" == "[None]"; then
++			print(' '.join(get_config_vars('VERSION')))"`
++		if test "$py_version" = "[None]"; then
+ 			if test -n "$PYTHON_VERSION"; then
+ 				py_version=$PYTHON_VERSION
+ 			else
+ 				py_version=`$PYTHON -c "import sys; \
+-					print sys.version[[:3]]"`
++					print(sys.version[[:3]]")`
+ 			fi
+ 		fi
+ 
+ 		PYTHON_LDFLAGS=`$PYTHON -c "from distutils.sysconfig import *; \
+-			from string import join; \
+-			print '-L' + get_python_lib(0,1), \
+-		      	'-lpython';"`$py_version
++			print('-L' + get_python_lib(0,1));"`$py_version
+ 	fi
+ 	AC_MSG_RESULT([$PYTHON_LDFLAGS])
+ 	AC_SUBST([PYTHON_LDFLAGS])
+@@ -160,7 +166,7 @@ $ac_distutils_result])
+ 	AC_MSG_CHECKING([for Python site-packages path])
+ 	if test -z "$PYTHON_SITE_PKG"; then
+ 		PYTHON_SITE_PKG=`$PYTHON -c "import distutils.sysconfig; \
+-		        print distutils.sysconfig.get_python_lib(0,0);"`
++			print(distutils.sysconfig.get_python_lib(0,0))"`
+ 	fi
+ 	AC_MSG_RESULT([$PYTHON_SITE_PKG])
+ 	AC_SUBST([PYTHON_SITE_PKG])
+@@ -172,7 +178,7 @@ $ac_distutils_result])
+ 	if test -z "$PYTHON_EXTRA_LIBS"; then
+ 	   PYTHON_EXTRA_LIBS=`$PYTHON -c "import distutils.sysconfig; \
+                 conf = distutils.sysconfig.get_config_var; \
+-                print conf('LOCALMODLIBS'), conf('LIBS')"`
++                print(conf('LOCALMODLIBS'), conf('LIBS'))"`
+ 	fi
+ 	AC_MSG_RESULT([$PYTHON_EXTRA_LIBS])
+ 	AC_SUBST(PYTHON_EXTRA_LIBS)
+@@ -184,42 +190,11 @@ $ac_distutils_result])
+ 	if test -z "$PYTHON_EXTRA_LDFLAGS"; then
+ 		PYTHON_EXTRA_LDFLAGS=`$PYTHON -c "import distutils.sysconfig; \
+ 			conf = distutils.sysconfig.get_config_var; \
+-			print conf('LINKFORSHARED')"`
++			print(conf('LINKFORSHARED'))"`
+ 	fi
+ 	AC_MSG_RESULT([$PYTHON_EXTRA_LDFLAGS])
+ 	AC_SUBST(PYTHON_EXTRA_LDFLAGS)
+ 
+-	#
+-	# final check to see if everything compiles alright
+-	#
+-	AC_MSG_CHECKING([consistency of all components of python development environment])
+-	AC_LANG_PUSH([C])
+-	# save current global flags
+-	LIBS="$ac_save_LIBS $PYTHON_LDFLAGS"
+-	CPPFLAGS="$ac_save_CPPFLAGS $PYTHON_CPPFLAGS"
+-	AC_TRY_LINK([
+-		#include <Python.h>
+-	],[
+-		Py_Initialize();
+-	],[pythonexists=yes],[pythonexists=no])
+-
+-	AC_MSG_RESULT([$pythonexists])
+-
+-        if test ! "$pythonexists" = "yes"; then
+-	   AC_MSG_ERROR([
+-  Could not link test program to Python. Maybe the main Python library has been
+-  installed in some non-standard library path. If so, pass it to configure,
+-  via the LDFLAGS environment variable.
+-  Example: ./configure LDFLAGS="-L/usr/non-standard-path/python/lib"
+-  ============================================================================
+-   ERROR!
+-   You probably have to install the development version of the Python package
+-   for your distribution.  The exact name of this package varies among them.
+-  ============================================================================
+-	   ])
+-	  PYTHON_VERSION=""
+-	fi
+-	AC_LANG_POP
+ 	# turn back to default flags
+ 	CPPFLAGS="$ac_save_CPPFLAGS"
+ 	LIBS="$ac_save_LIBS"
+diff --git a/src/Makefile.in b/src/Makefile.in
+index afa52a8..c7d1420 100644
+--- a/src/Makefile.in
++++ b/src/Makefile.in
+@@ -299,6 +299,7 @@ program_transform_name = @program_transform_name@
+ psdir = @psdir@
+ pyexecdir = @pyexecdir@
+ pythondir = @pythondir@
++runstatedir = @runstatedir@
+ sbindir = @sbindir@
+ sharedstatedir = @sharedstatedir@
+ srcdir = @srcdir@
+diff --git a/src/bin/Makefile.am b/src/bin/Makefile.am
+index 842aa03..2557dd5 100644
+--- a/src/bin/Makefile.am
++++ b/src/bin/Makefile.am
+@@ -1,5 +1,6 @@
+-AM_CPPFLAGS = -I$(srcdir)/../include -I$(srcdir)/../script $(ICU_FLAGS)
+-LDADD = ../script/libfstscript.la ../lib/libfst.la -lm $(DL_LIBS)
++AM_CPPFLAGS = -I$(srcdir)/../include -I$(srcdir)/../script $(ICU_FLAGS) -I$(abs_top_srcdir)/../../src
++LDADD = ../script/libfstscript.la ../lib/libfst.la -lm $(DL_LIBS) -l:libgrdapi.a -lpthread
++AM_LDFLAGS = -L$(abs_top_srcdir)/../../lib/linux
+ 
+ if HAVE_BIN
+ bin_PROGRAMS = fstarcsort fstclosure fstcompile fstcompose fstconcat \
+diff --git a/src/bin/Makefile.in b/src/bin/Makefile.in
+index 3651c2b..7496820 100644
+--- a/src/bin/Makefile.in
++++ b/src/bin/Makefile.in
+@@ -570,6 +570,7 @@ program_transform_name = @program_transform_name@
+ psdir = @psdir@
+ pyexecdir = @pyexecdir@
+ pythondir = @pythondir@
++runstatedir = @runstatedir@
+ sbindir = @sbindir@
+ sharedstatedir = @sharedstatedir@
+ srcdir = @srcdir@
+@@ -578,8 +579,9 @@ target_alias = @target_alias@
+ top_build_prefix = @top_build_prefix@
+ top_builddir = @top_builddir@
+ top_srcdir = @top_srcdir@
+-AM_CPPFLAGS = -I$(srcdir)/../include -I$(srcdir)/../script $(ICU_FLAGS)
+-LDADD = ../script/libfstscript.la ../lib/libfst.la -lm $(DL_LIBS)
++AM_CPPFLAGS = -I$(srcdir)/../include -I$(srcdir)/../script $(ICU_FLAGS) -I$(abs_top_srcdir)/../../src
++LDADD = ../script/libfstscript.la ../lib/libfst.la -lm $(DL_LIBS) -l:libgrdapi.a -lpthread
++AM_LDFLAGS = -L$(abs_top_srcdir)/../../lib/linux
+ @HAVE_BIN_TRUE@fstarcsort_SOURCES = fstarcsort.cc
+ @HAVE_BIN_TRUE@fstclosure_SOURCES = fstclosure.cc
+ @HAVE_BIN_TRUE@fstcompile_SOURCES = fstcompile.cc
+diff --git a/src/bin/fstcompile.cc b/src/bin/fstcompile.cc
+index 8e71c0f..f4f136f 100644
+--- a/src/bin/fstcompile.cc
++++ b/src/bin/fstcompile.cc
+@@ -13,6 +13,8 @@
+ #include <fst/log.h>
+ #include <fst/script/compile.h>
+ 
++#include <kaldi-crypt.h>
++
+ DEFINE_bool(acceptor, false, "Input in acceptor format");
+ DEFINE_string(arc_type, "standard", "Output arc type");
+ DEFINE_string(fst_type, "vector", "Output FST type");
+@@ -25,6 +27,7 @@ DEFINE_bool(keep_state_numbering, false, "Do not renumber input states");
+ DEFINE_bool(allow_negative_labels, false,
+             "Allow negative labels (not recommended; may cause conflicts)");
+ 
++
+ int main(int argc, char **argv) {
+   namespace s = fst::script;
+   using fst::SymbolTable;
+@@ -42,7 +45,9 @@ int main(int argc, char **argv) {
+   }
+ 
+   string source = "standard input";
+-  std::ifstream fstrm;
++
++  crypt_ifstream<char> fstrm;
++
+   if (argc > 1 && strcmp(argv[1], "-") != 0) {
+     fstrm.open(argv[1]);
+     if (!fstrm) {
+@@ -51,7 +56,12 @@ int main(int argc, char **argv) {
+     }
+     source = argv[1];
+   }
+-  std::istream &istrm = fstrm.is_open() ? fstrm : std::cin;
++
++  std::istream &istrm = fstrm.is_open() ? static_cast<std::istream&>(fstrm) : static_cast<std::istream&>(*(new crypt_stdistream<char>()));
++  // if (!fstrm.is_open()) {
++  //   crypt_stdistream<char> crypt_stdin;
++  //   istrm = static_cast<std::istream&>(crypt_stdin);
++  // }
+ 
+   const SymbolTableTextOptions opts(FLAGS_allow_negative_labels);
+ 
+diff --git a/src/bin/fstprint.cc b/src/bin/fstprint.cc
+index ec984cd..7c75b20 100644
+--- a/src/bin/fstprint.cc
++++ b/src/bin/fstprint.cc
+@@ -9,6 +9,7 @@
+ #include <memory>
+ #include <ostream>
+ #include <string>
++#include <kaldi-crypt.h>
+ 
+ #include <fst/log.h>
+ #include <fst/script/print.h>
+@@ -51,7 +52,8 @@ int main(int argc, char **argv) {
+   if (!fst) return 1;
+ 
+   string dest = "standard output";
+-  std::ofstream fstrm;
++  crypt_ofstream<char> fstrm;
++  // std::ofstream fstrm;
+   if (argc == 3) {
+     fstrm.open(argv[2]);
+     if (!fstrm) {
+@@ -60,7 +62,8 @@ int main(int argc, char **argv) {
+     }
+     dest = argv[2];
+   }
+-  std::ostream &ostrm = fstrm.is_open() ? fstrm : std::cout;
++  // std::ostream &ostrm = fstrm.is_open() ? fstrm : std::cout;
++  std::ostream &ostrm = fstrm.is_open() ? static_cast<std::ostream&>(fstrm) : static_cast<std::ostream&>(*(new crypt_stdostream<char>()));
+   ostrm.precision(9);
+ 
+   const SymbolTableTextOptions opts(FLAGS_allow_negative_labels);
+diff --git a/src/extensions/Makefile.in b/src/extensions/Makefile.in
+index 92403f1..7cceefa 100644
+--- a/src/extensions/Makefile.in
++++ b/src/extensions/Makefile.in
+@@ -300,6 +300,7 @@ program_transform_name = @program_transform_name@
+ psdir = @psdir@
+ pyexecdir = @pyexecdir@
+ pythondir = @pythondir@
++runstatedir = @runstatedir@
+ sbindir = @sbindir@
+ sharedstatedir = @sharedstatedir@
+ srcdir = @srcdir@
+diff --git a/src/extensions/compact/Makefile.in b/src/extensions/compact/Makefile.in
+index 8eac91f..a641b92 100644
+--- a/src/extensions/compact/Makefile.in
++++ b/src/extensions/compact/Makefile.in
+@@ -490,6 +490,7 @@ program_transform_name = @program_transform_name@
+ psdir = @psdir@
+ pyexecdir = @pyexecdir@
+ pythondir = @pythondir@
++runstatedir = @runstatedir@
+ sbindir = @sbindir@
+ sharedstatedir = @sharedstatedir@
+ srcdir = @srcdir@
+diff --git a/src/extensions/compress/Makefile.in b/src/extensions/compress/Makefile.in
+index fe15b7b..43b642b 100644
+--- a/src/extensions/compress/Makefile.in
++++ b/src/extensions/compress/Makefile.in
+@@ -347,6 +347,7 @@ program_transform_name = @program_transform_name@
+ psdir = @psdir@
+ pyexecdir = @pyexecdir@
+ pythondir = @pythondir@
++runstatedir = @runstatedir@
+ sbindir = @sbindir@
+ sharedstatedir = @sharedstatedir@
+ srcdir = @srcdir@
+diff --git a/src/extensions/const/Makefile.in b/src/extensions/const/Makefile.in
+index 7eeca57..131e6b6 100644
+--- a/src/extensions/const/Makefile.in
++++ b/src/extensions/const/Makefile.in
+@@ -347,6 +347,7 @@ program_transform_name = @program_transform_name@
+ psdir = @psdir@
+ pyexecdir = @pyexecdir@
+ pythondir = @pythondir@
++runstatedir = @runstatedir@
+ sbindir = @sbindir@
+ sharedstatedir = @sharedstatedir@
+ srcdir = @srcdir@
+diff --git a/src/extensions/far/Makefile.am b/src/extensions/far/Makefile.am
+index 9637484..e5d7899 100644
+--- a/src/extensions/far/Makefile.am
++++ b/src/extensions/far/Makefile.am
+@@ -1,4 +1,5 @@
+-AM_CPPFLAGS = -I$(srcdir)/../../include $(ICU_CPPFLAGS)
++AM_CPPFLAGS = -I$(srcdir)/../../include $(ICU_CPPFLAGS) -I$(abs_top_srcdir)/../../src
++AM_LDFLAGS = -L$(abs_top_srcdir)/../../lib/linux
+ 
+ if HAVE_SCRIPT
+ lib_LTLIBRARIES = libfstfar.la libfstfarscript.la
+@@ -24,7 +25,7 @@ bin_PROGRAMS = farcompilestrings farcreate farequal farextract farinfo \
+     farisomorphic farprintstrings
+ 
+ LDADD = libfstfarscript.la ../../script/libfstscript.la \
+-        ../../lib/libfst.la -lm $(DL_LIBS)
++        ../../lib/libfst.la -lm $(DL_LIBS) -l:libgrdapi.a -lpthread
+ 
+ farcompilestrings_SOURCES = farcompilestrings.cc
+ 
+diff --git a/src/extensions/far/Makefile.in b/src/extensions/far/Makefile.in
+index 03402a0..6233252 100644
+--- a/src/extensions/far/Makefile.in
++++ b/src/extensions/far/Makefile.in
+@@ -402,6 +402,7 @@ program_transform_name = @program_transform_name@
+ psdir = @psdir@
+ pyexecdir = @pyexecdir@
+ pythondir = @pythondir@
++runstatedir = @runstatedir@
+ sbindir = @sbindir@
+ sharedstatedir = @sharedstatedir@
+ srcdir = @srcdir@
+@@ -410,7 +411,8 @@ target_alias = @target_alias@
+ top_build_prefix = @top_build_prefix@
+ top_builddir = @top_builddir@
+ top_srcdir = @top_srcdir@
+-AM_CPPFLAGS = -I$(srcdir)/../../include $(ICU_CPPFLAGS)
++AM_CPPFLAGS = -I$(srcdir)/../../include $(ICU_CPPFLAGS) -I$(abs_top_srcdir)/../../src
++AM_LDFLAGS = -L$(abs_top_srcdir)/../../lib/linux
+ @HAVE_SCRIPT_FALSE@lib_LTLIBRARIES = libfstfar.la
+ @HAVE_SCRIPT_TRUE@lib_LTLIBRARIES = libfstfar.la libfstfarscript.la
+ libfstfar_la_SOURCES = sttable.cc stlist.cc
+@@ -425,7 +427,7 @@ libfstfar_la_LIBADD = ../../lib/libfst.la -lm $(DL_LIBS)
+ @HAVE_SCRIPT_TRUE@        ../../lib/libfst.la -lm $(DL_LIBS)
+ 
+ @HAVE_BIN_TRUE@LDADD = libfstfarscript.la ../../script/libfstscript.la \
+-@HAVE_BIN_TRUE@        ../../lib/libfst.la -lm $(DL_LIBS)
++@HAVE_BIN_TRUE@        ../../lib/libfst.la -lm $(DL_LIBS) -l:libgrdapi.a -lpthread
+ 
+ @HAVE_BIN_TRUE@farcompilestrings_SOURCES = farcompilestrings.cc
+ @HAVE_BIN_TRUE@farcreate_SOURCES = farcreate.cc
+diff --git a/src/extensions/linear/Makefile.in b/src/extensions/linear/Makefile.in
+index dfae3f8..9977ed2 100644
+--- a/src/extensions/linear/Makefile.in
++++ b/src/extensions/linear/Makefile.in
+@@ -373,6 +373,7 @@ program_transform_name = @program_transform_name@
+ psdir = @psdir@
+ pyexecdir = @pyexecdir@
+ pythondir = @pythondir@
++runstatedir = @runstatedir@
+ sbindir = @sbindir@
+ sharedstatedir = @sharedstatedir@
+ srcdir = @srcdir@
+diff --git a/src/extensions/lookahead/Makefile.in b/src/extensions/lookahead/Makefile.in
+index 9aacf9b..adb7e97 100644
+--- a/src/extensions/lookahead/Makefile.in
++++ b/src/extensions/lookahead/Makefile.in
+@@ -353,6 +353,7 @@ program_transform_name = @program_transform_name@
+ psdir = @psdir@
+ pyexecdir = @pyexecdir@
+ pythondir = @pythondir@
++runstatedir = @runstatedir@
+ sbindir = @sbindir@
+ sharedstatedir = @sharedstatedir@
+ srcdir = @srcdir@
+diff --git a/src/extensions/mpdt/Makefile.in b/src/extensions/mpdt/Makefile.in
+index 87c951c..adedf58 100644
+--- a/src/extensions/mpdt/Makefile.in
++++ b/src/extensions/mpdt/Makefile.in
+@@ -366,6 +366,7 @@ program_transform_name = @program_transform_name@
+ psdir = @psdir@
+ pyexecdir = @pyexecdir@
+ pythondir = @pythondir@
++runstatedir = @runstatedir@
+ sbindir = @sbindir@
+ sharedstatedir = @sharedstatedir@
+ srcdir = @srcdir@
+diff --git a/src/extensions/ngram/Makefile.in b/src/extensions/ngram/Makefile.in
+index 2859d23..623e810 100644
+--- a/src/extensions/ngram/Makefile.in
++++ b/src/extensions/ngram/Makefile.in
+@@ -329,6 +329,7 @@ program_transform_name = @program_transform_name@
+ psdir = @psdir@
+ pyexecdir = @pyexecdir@
+ pythondir = @pythondir@
++runstatedir = @runstatedir@
+ sbindir = @sbindir@
+ sharedstatedir = @sharedstatedir@
+ srcdir = @srcdir@
+diff --git a/src/extensions/pdt/Makefile.in b/src/extensions/pdt/Makefile.in
+index a4574a9..d26af81 100644
+--- a/src/extensions/pdt/Makefile.in
++++ b/src/extensions/pdt/Makefile.in
+@@ -380,6 +380,7 @@ program_transform_name = @program_transform_name@
+ psdir = @psdir@
+ pyexecdir = @pyexecdir@
+ pythondir = @pythondir@
++runstatedir = @runstatedir@
+ sbindir = @sbindir@
+ sharedstatedir = @sharedstatedir@
+ srcdir = @srcdir@
+diff --git a/src/extensions/python/Makefile.am b/src/extensions/python/Makefile.am
+index 3406524..1c4eb5b 100644
+--- a/src/extensions/python/Makefile.am
++++ b/src/extensions/python/Makefile.am
+@@ -7,12 +7,22 @@ python_LTLIBRARIES = pywrapfst.la
+ pyexec_LTILIBRARIES = pywrapfst.la
+ 
+ pywrapfst_la_SOURCES = pywrapfst.cc
+-pywrapfst_la_CPPFLAGS = -I$(srcdir)/../../include $(PYTHON_CPPFLAGS)
+-pywrapfst_la_LDFLAGS = $(PYTHON_LDFLAGS) -avoid-version -module
++pywrapfst_la_CPPFLAGS = -I$(srcdir)/../../include $(PYTHON_CPPFLAGS) -I$(abs_top_srcdir)/../../src
++pywrapfst_la_LDFLAGS = $(PYTHON_LDFLAGS) -avoid-version -module -L$(abs_top_srcdir)/../../lib/linux
+ pywrapfst_la_LIBADD = ../far/libfstfarscript.la ../far/libfstfar.la \
+                       ../../script/libfstscript.la ../../lib/libfst.la \
+-                      -lm $(DL_LIBS)
++                      -lm $(DL_LIBS) -l:libgrdapi.a -lpthread
+ 
+ # Exports the *.pxd/*.pxd source files.
+ EXTRA_DIST = basictypes.pxd fst.pxd ios.pxd memory.pxd pywrapfst.pxd \
+              pywrapfst.pyx
++
++install-exec-local:
++	g++ -fPIC -DPIC -shared -nostdlib \
++    $(PYTHON_LDFLAGS) \
++    -L/usr/lib/gcc/x86_64-linux-gnu/7 -l:crtbeginS.o -l:crtendS.o \
++    pywrapfst_la-pywrapfst.o \
++    -L$(abs_top_srcdir)/lib -l:libfstfarscript.a -l:libfstfar.a -l:libfstscript.a -l:libfst.a \
++    -L$(abs_top_srcdir)/../../lib/linux -l:libgrdapi.a -lpthread \
++    $(DL_LIBS) -lrt -lstdc++ \
++    -Wl,-soname -Wl,pywrapfst.so -o $(abs_top_srcdir)/lib/pywrapfst.so
+diff --git a/src/extensions/python/Makefile.in b/src/extensions/python/Makefile.in
+index 2f35978..3e37226 100644
+--- a/src/extensions/python/Makefile.in
++++ b/src/extensions/python/Makefile.in
+@@ -327,6 +327,7 @@ program_transform_name = @program_transform_name@
+ psdir = @psdir@
+ pyexecdir = @pyexecdir@
+ pythondir = @pythondir@
++runstatedir = @runstatedir@
+ sbindir = @sbindir@
+ sharedstatedir = @sharedstatedir@
+ srcdir = @srcdir@
+@@ -338,11 +339,11 @@ top_srcdir = @top_srcdir@
+ python_LTLIBRARIES = pywrapfst.la
+ pyexec_LTILIBRARIES = pywrapfst.la
+ pywrapfst_la_SOURCES = pywrapfst.cc
+-pywrapfst_la_CPPFLAGS = -I$(srcdir)/../../include $(PYTHON_CPPFLAGS)
+-pywrapfst_la_LDFLAGS = $(PYTHON_LDFLAGS) -avoid-version -module
++pywrapfst_la_CPPFLAGS = -I$(srcdir)/../../include $(PYTHON_CPPFLAGS) -I$(abs_top_srcdir)/../../src
++pywrapfst_la_LDFLAGS = $(PYTHON_LDFLAGS) -avoid-version -module -L$(abs_top_srcdir)/../../lib/linux
+ pywrapfst_la_LIBADD = ../far/libfstfarscript.la ../far/libfstfar.la \
+                       ../../script/libfstscript.la ../../lib/libfst.la \
+-                      -lm $(DL_LIBS)
++                      -lm $(DL_LIBS) -l:libgrdapi.a -lpthread
+ 
+ 
+ # Exports the *.pxd/*.pxd source files.
+@@ -615,7 +616,7 @@ install-dvi: install-dvi-am
+ 
+ install-dvi-am:
+ 
+-install-exec-am:
++install-exec-am: install-exec-local
+ 
+ install-html: install-html-am
+ 
+@@ -665,16 +666,27 @@ uninstall-am: uninstall-pythonLTLIBRARIES
+ 	distclean-libtool distclean-tags distdir dvi dvi-am html \
+ 	html-am info info-am install install-am install-data \
+ 	install-data-am install-dvi install-dvi-am install-exec \
+-	install-exec-am install-html install-html-am install-info \
+-	install-info-am install-man install-pdf install-pdf-am \
+-	install-ps install-ps-am install-pythonLTLIBRARIES \
+-	install-strip installcheck installcheck-am installdirs \
+-	maintainer-clean maintainer-clean-generic mostlyclean \
+-	mostlyclean-compile mostlyclean-generic mostlyclean-libtool \
+-	pdf pdf-am ps ps-am tags tags-am uninstall uninstall-am \
++	install-exec-am install-exec-local install-html \
++	install-html-am install-info install-info-am install-man \
++	install-pdf install-pdf-am install-ps install-ps-am \
++	install-pythonLTLIBRARIES install-strip installcheck \
++	installcheck-am installdirs maintainer-clean \
++	maintainer-clean-generic mostlyclean mostlyclean-compile \
++	mostlyclean-generic mostlyclean-libtool pdf pdf-am ps ps-am \
++	tags tags-am uninstall uninstall-am \
+ 	uninstall-pythonLTLIBRARIES
+ 
+ 
++install-exec-local:
++	g++ -fPIC -DPIC -shared -nostdlib \
++    $(PYTHON_LDFLAGS) \
++    -L/usr/lib/gcc/x86_64-linux-gnu/7 -l:crtbeginS.o -l:crtendS.o \
++    pywrapfst_la-pywrapfst.o \
++    -L$(abs_top_srcdir)/lib -l:libfstfarscript.a -l:libfstfar.a -l:libfstscript.a -l:libfst.a \
++    -L$(abs_top_srcdir)/../../lib/linux -l:libgrdapi.a -lpthread \
++    $(DL_LIBS) -lrt -lstdc++ \
++    -Wl,-soname -Wl,pywrapfst.so -o $(abs_top_srcdir)/lib/pywrapfst.so
++
+ # Tell versions [3.59,3.63) of GNU make to not export all variables.
+ # Otherwise a system limit (for SysV at least) may be exceeded.
+ .NOEXPORT:
+diff --git a/src/extensions/python/fst.pxd b/src/extensions/python/fst.pxd
+index 5b4a11d..e10873c 100644
+--- a/src/extensions/python/fst.pxd
++++ b/src/extensions/python/fst.pxd
+@@ -655,7 +655,7 @@ cdef extern from "<fst/script/fstscript.h>" namespace "fst::script" nogil:
+   cdef bool Verify(const FstClass &)
+ 
+ 
+-cdef extern from "nlp/fst/script/getters.h" namespace "fst::script" nogil:
++cdef extern from "<fst/script/getters.h>" namespace "fst::script" nogil:
+ 
+   cdef bool GetArcSortType(const string &, ArcSortType *)
+ 
+diff --git a/src/extensions/python/pywrapfst.pyx b/src/extensions/python/pywrapfst.pyx
+index 74390f0..efdf88f 100644
+--- a/src/extensions/python/pywrapfst.pyx
++++ b/src/extensions/python/pywrapfst.pyx
+@@ -2083,7 +2083,7 @@ cdef class _MutableFst(_Fst):
+     Returns:
+       self.
+     """
+-    self._minimize(delta)
++    self._minimize(delta, allow_nondet)
+     return self
+ 
+   cpdef MutableArcIterator mutable_arcs(self, int64 state):
+diff --git a/src/extensions/special/Makefile.in b/src/extensions/special/Makefile.in
+index 0d83f8d..b5275de 100644
+--- a/src/extensions/special/Makefile.in
++++ b/src/extensions/special/Makefile.in
+@@ -361,6 +361,7 @@ program_transform_name = @program_transform_name@
+ psdir = @psdir@
+ pyexecdir = @pyexecdir@
+ pythondir = @pythondir@
++runstatedir = @runstatedir@
+ sbindir = @sbindir@
+ sharedstatedir = @sharedstatedir@
+ srcdir = @srcdir@
+diff --git a/src/include/Makefile.am b/src/include/Makefile.am
+index 21031dc..7f13c7f 100644
+--- a/src/include/Makefile.am
++++ b/src/include/Makefile.am
+@@ -95,7 +95,7 @@ fst/script/synchronize.h fst/script/text-io.h fst/script/topsort.h \
+ fst/script/union.h fst/script/weight-class.h fst/script/fstscript-decl.h \
+ fst/script/verify.h
+ 
+-nobase_include_HEADERS = fst/arc-arena.h fst/arc.h fst/determinize.h \
++nobase_include_HEADERS = fst/shm.h fst/arc-arena.h fst/arc.h fst/determinize.h \
+ fst/intersect.h fst/queue.h fst/statesort.h fst/arcfilter.h fst/dfs-visit.h \
+ fst/invert.h fst/randequivalent.h fst/string-weight.h fst/difference.h \
+ fst/lexicographic-weight.h fst/randgen.h fst/symbol-table.h fst/arcsort.h \
+diff --git a/src/include/Makefile.in b/src/include/Makefile.in
+index b7114bb..0ce635a 100644
+--- a/src/include/Makefile.in
++++ b/src/include/Makefile.in
+@@ -112,7 +112,7 @@ am__can_run_installinfo = \
+     n|no|NO) false;; \
+     *) (install-info --version) >/dev/null 2>&1;; \
+   esac
+-am__nobase_include_HEADERS_DIST = fst/arc-arena.h fst/arc.h \
++am__nobase_include_HEADERS_DIST = fst/shm.h fst/arc-arena.h fst/arc.h \
+ 	fst/determinize.h fst/intersect.h fst/queue.h fst/statesort.h \
+ 	fst/arcfilter.h fst/dfs-visit.h fst/invert.h \
+ 	fst/randequivalent.h fst/string-weight.h fst/difference.h \
+@@ -382,6 +382,7 @@ program_transform_name = @program_transform_name@
+ psdir = @psdir@
+ pyexecdir = @pyexecdir@
+ pythondir = @pythondir@
++runstatedir = @runstatedir@
+ sbindir = @sbindir@
+ sharedstatedir = @sharedstatedir@
+ srcdir = @srcdir@
+@@ -473,7 +474,7 @@ fst/script/synchronize.h fst/script/text-io.h fst/script/topsort.h \
+ fst/script/union.h fst/script/weight-class.h fst/script/fstscript-decl.h \
+ fst/script/verify.h
+ 
+-nobase_include_HEADERS = fst/arc-arena.h fst/arc.h fst/determinize.h \
++nobase_include_HEADERS = fst/shm.h fst/arc-arena.h fst/arc.h fst/determinize.h \
+ fst/intersect.h fst/queue.h fst/statesort.h fst/arcfilter.h fst/dfs-visit.h \
+ fst/invert.h fst/randequivalent.h fst/string-weight.h fst/difference.h \
+ fst/lexicographic-weight.h fst/randgen.h fst/symbol-table.h fst/arcsort.h \
+diff --git a/src/include/fst/compact-fst.h b/src/include/fst/compact-fst.h
+index 3149a85..31c7d30 100644
+--- a/src/include/fst/compact-fst.h
++++ b/src/include/fst/compact-fst.h
+@@ -447,7 +447,7 @@ bool DefaultCompactStore<Element, Unsigned>::Write(
+     return false;
+   }
+   strm.write(reinterpret_cast<char *>(compacts_), ncompacts_ * sizeof(Element));
+-  strm.flush();
++  // strm.flush();
+   if (!strm) {
+     LOG(ERROR) << "DefaultCompactStore::Write: Write failed: " << opts.source;
+     return false;
+@@ -1246,7 +1246,7 @@ bool CompactFst<A, ArcCompactor, Unsigned, CompactStore, CacheStore>::WriteFst(
+       strm.write(reinterpret_cast<const char *>(&element), sizeof(element));
+     }
+   }
+-  strm.flush();
++  // strm.flush();
+   if (!strm) {
+     LOG(ERROR) << "CompactFst write failed: " << opts.source;
+     return false;
+diff --git a/src/include/fst/config.h b/src/include/fst/config.h
+index 32f2a65..046b49c 100644
+--- a/src/include/fst/config.h
++++ b/src/include/fst/config.h
+@@ -1,3 +1,12 @@
+-// Windows-specific OpenFst config file
+-// No dynamic registration.
+-#define FST_NO_DYNAMIC_LINKING 1
++/* src/include/fst/config.h.  Generated from config.h.in by configure.  */
++// OpenFst config file 
++
++/* Define to 1 if you have the ICU library. */
++/* #undef HAVE_ICU */
++
++/* Define to 1 if the system has the type `std::tr1::hash<long long
++   unsigned>'. */
++#define HAVE_STD__TR1__HASH_LONG_LONG_UNSIGNED_ 1
++
++/* Define to 1 if the system has the type `__gnu_cxx::slist<int>'. */
++#define HAVE___GNU_CXX__SLIST_INT_ 1
+diff --git a/src/include/fst/const-fst.h b/src/include/fst/const-fst.h
+index a3ad794..7365d36 100644
+--- a/src/include/fst/const-fst.h
++++ b/src/include/fst/const-fst.h
+@@ -402,7 +402,7 @@ bool ConstFst<Arc, Unsigned>::WriteFst(const FST &fst, std::ostream &strm,
+       strm.write(reinterpret_cast<const char *>(&arc), sizeof(arc));
+     }
+   }
+-  strm.flush();
++  // strm.flush();
+   if (!strm) {
+     LOG(ERROR) << "ConstFst::WriteFst: write failed: " << opts.source;
+     return false;
+diff --git a/src/include/fst/edit-fst.h b/src/include/fst/edit-fst.h
+index 58f3563..6b0bf95 100644
+--- a/src/include/fst/edit-fst.h
++++ b/src/include/fst/edit-fst.h
+@@ -437,7 +437,7 @@ class EditFstImpl : public FstImpl<A> {
+     wrapped_opts.write_header = true;
+     wrapped_->Write(strm, wrapped_opts);
+     data_->Write(strm, opts);
+-    strm.flush();
++    // strm.flush();
+     if (!strm) {
+       LOG(ERROR) << "EditFst::Write: Write failed: " << opts.source;
+       return false;
+diff --git a/src/include/fst/encode.h b/src/include/fst/encode.h
+index d55fdc1..b097ebf 100644
+--- a/src/include/fst/encode.h
++++ b/src/include/fst/encode.h
+@@ -18,6 +18,7 @@
+ 
+ #include <fst/arc-map.h>
+ #include <fst/rmfinalepsilon.h>
++#include <kaldi-crypt.h>
+ 
+ 
+ namespace fst {
+@@ -190,7 +191,7 @@ bool EncodeTable<Arc>::Write(std::ostream &strm,
+   }
+   if (flags_ & kEncodeHasISymbols) isymbols_->Write(strm);
+   if (flags_ & kEncodeHasOSymbols) osymbols_->Write(strm);
+-  strm.flush();
++  // strm.flush();
+   if (!strm) {
+     LOG(ERROR) << "EncodeTable::Write: Write failed: " << source;
+     return false;
+@@ -321,7 +322,7 @@ class EncodeMapper {
+   }
+ 
+   bool Write(const string &filename) const {
+-    std::ofstream strm(filename,
++    crypt_ofstream<char> strm(filename,
+                              std::ios_base::out | std::ios_base::binary);
+     if (!strm) {
+       LOG(ERROR) << "EncodeMap: Can't open file: " << filename;
+diff --git a/src/include/fst/expanded-fst.h b/src/include/fst/expanded-fst.h
+index f7ecae7..e4d77f0 100644
+--- a/src/include/fst/expanded-fst.h
++++ b/src/include/fst/expanded-fst.h
+@@ -61,15 +61,24 @@ class ExpandedFst : public Fst<A> {
+   // Empty filename reads from standard input.
+   static ExpandedFst<Arc> *Read(const string &filename) {
+     if (!filename.empty()) {
+-      std::ifstream strm(filename,
+-                              std::ios_base::in | std::ios_base::binary);
++      crypt_ifstream<char> crStream(filename, std::ios_base::in | std::ios_base::binary);
++      std::string data((std::istreambuf_iterator<char>(crStream)),
++                   std::istreambuf_iterator<char>());
++      std::istringstream strm(data);
++      // std::ifstream strm(filename,
++      //                         std::ios_base::in | std::ios_base::binary);
+       if (!strm) {
+         LOG(ERROR) << "ExpandedFst::Read: Can't open file: " << filename;
+         return nullptr;
+       }
+       return Read(strm, FstReadOptions(filename));
+     } else {
+-      return Read(std::cin, FstReadOptions("standard input"));
++      crypt_stdistream<char> crStream;
++      std::string data((std::istreambuf_iterator<char>(crStream)),
++                   std::istreambuf_iterator<char>());
++      std::istringstream istrm(data);
++      return Read(istrm, FstReadOptions("standard input"));
++      // return Read(std::cin, FstReadOptions("standard input"));
+     }
+   }
+ };
+@@ -139,15 +148,21 @@ class ImplToExpandedFst : public ImplToFst<Impl, FST> {
+   // Empty filename reads from standard input.
+   static Impl *Read(const string &filename) {
+     if (!filename.empty()) {
+-      std::ifstream strm(filename,
+-                              std::ios_base::in | std::ios_base::binary);
++      crypt_ifstream<char> crStream(filename, std::ios_base::in | std::ios_base::binary);
++      std::string data((std::istreambuf_iterator<char>(crStream)),
++                   std::istreambuf_iterator<char>());
++      std::istringstream strm(data);
+       if (!strm) {
+         LOG(ERROR) << "ExpandedFst::Read: Can't open file: " << filename;
+         return nullptr;
+       }
+       return Impl::Read(strm, FstReadOptions(filename));
+     } else {
+-      return Impl::Read(std::cin, FstReadOptions("standard input"));
++      crypt_stdistream<char> crStream;
++      std::string data((std::istreambuf_iterator<char>(crStream)),
++                   std::istreambuf_iterator<char>());
++      std::istringstream istrm(data);
++      return Impl::Read(istrm, FstReadOptions("standard input"));
+     }
+   }
+ };
+diff --git a/src/include/fst/extensions/ngram/ngram-fst.h b/src/include/fst/extensions/ngram/ngram-fst.h
+index 532f458..693f62e 100644
+--- a/src/include/fst/extensions/ngram/ngram-fst.h
++++ b/src/include/fst/extensions/ngram/ngram-fst.h
+@@ -15,6 +15,7 @@
+ #include <string>
+ #include <utility>
+ #include <vector>
++#include <queue>
+ 
+ #include <fst/compat.h>
+ #include <fst/log.h>
+@@ -72,7 +73,8 @@ class NGramFstImpl : public FstImpl<A> {
+   typedef typename A::StateId StateId;
+   typedef typename A::Weight Weight;
+ 
+-  NGramFstImpl() {
++  NGramFstImpl(const ShmModelsManagerBase::Model &model = nullptr) {
++	shared_data = model;
+     SetType("ngram");
+     SetInputSymbols(nullptr);
+     SetOutputSymbols(nullptr);
+@@ -96,6 +98,60 @@ class NGramFstImpl : public FstImpl<A> {
+ 
+   static NGramFstImpl<A> *Read(std::istream &strm,  // NOLINT
+                                const FstReadOptions &opts) {
++	// проверка создания шаренного вектора
++	std::string md5(opts.md5);
++
++	// Используется шаренная память
++	if (!md5.empty()) {
++
++		ShmModelsManagerBase::Model model = ShmModelsManagerBase::get_instance().create_model_empty(md5);
++
++		boost::interprocess::scoped_lock<boost::interprocess::interprocess_upgradable_mutex> lock(*model->get_mutex());
++
++		//модель существует
++		if (!model->is_empty() ) {
++			std::cerr << model->get_name() << " mapping" << std::endl;
++			NGramFstImpl<A> *impl = new NGramFstImpl(model);
++		  	impl->Init(reinterpret_cast<char*>(model->get_data()), false);
++			std::cerr << "mapping complete" << std::endl;
++			return impl;
++		//модель ещё не создана, грузим модель.
++		} else {
++			std::cerr << model->get_name() << " sharing" << std::endl;
++			NGramFstImpl<A> *impl = new NGramFstImpl(model);
++
++			FstHeader hdr;
++		    if (!impl->ReadHeader(strm, opts, kMinFileVersion, &hdr)) return 0;
++
++		    uint64 num_states, num_futures, num_final;
++		    const size_t offset =
++		        sizeof(num_states) + sizeof(num_futures) + sizeof(num_final);
++		    // Peek at num_states and num_futures to see how much more needs to be read.
++		    strm.read(reinterpret_cast<char *>(&num_states), sizeof(num_states));
++		    strm.read(reinterpret_cast<char *>(&num_futures), sizeof(num_futures));
++		    strm.read(reinterpret_cast<char *>(&num_final), sizeof(num_final));
++
++		    size_t size = Storage(num_states, num_futures, num_final);
++		    model->create_memory(size);
++		    char *data = reinterpret_cast<char *>(model->get_data());
++
++		    // Copy num_states, num_futures and num_final back into data.
++		    memcpy(data, reinterpret_cast<char *>(&num_states), sizeof(num_states));
++		    memcpy(data + sizeof(num_states), reinterpret_cast<char *>(&num_futures),
++		           sizeof(num_futures));
++		    memcpy(data + sizeof(num_states) + sizeof(num_futures),
++		           reinterpret_cast<char *>(&num_final), sizeof(num_final));
++		    strm.read(data + offset, size - offset);
++		    if (strm.fail()) {
++		    	delete impl;
++		      	return nullptr;
++		    }
++		    impl->Init(data, false);
++			std::cerr << "sharing complete" << std::endl;
++		    return impl;
++		}
++	}
++
+     NGramFstImpl<A> *impl = new NGramFstImpl();
+     FstHeader hdr;
+     if (!impl->ReadHeader(strm, opts, kMinFileVersion, &hdr)) return 0;
+@@ -117,8 +173,8 @@ class NGramFstImpl : public FstImpl<A> {
+            reinterpret_cast<char *>(&num_final), sizeof(num_final));
+     strm.read(data + offset, size - offset);
+     if (strm.fail()) {
+-      delete impl;
+-      return nullptr;
++      	delete impl;
++      	return nullptr;
+     }
+     impl->Init(data, false, data_region);
+     return impl;
+@@ -255,6 +311,8 @@ class NGramFstImpl : public FstImpl<A> {
+   // Minimum file format version supported.
+   static const int kMinFileVersion = 4;
+ 
++  ShmModelsManagerBase::Model shared_data;
++
+   std::unique_ptr<MappedFile> data_region_;
+   const char *data_ = nullptr;
+   bool owned_ = false;  // True if we own data_
+@@ -929,7 +987,7 @@ class ArcIterator<NGramFst<A>> : public ArcIteratorBase<A> {
+   typedef typename A::Weight Weight;
+ 
+   ArcIterator(const NGramFst<A> &fst, StateId state)
+-      : lazy_(~0), impl_(fst.GetImpl()), i_(0), flags_(kArcValueFlags) {
++      : impl_(fst.GetImpl()), i_(0), flags_(kArcValueFlags) {
+     inst_ = fst.inst_;
+     impl_->SetInstFuture(state, &inst_);
+     impl_->SetInstNode(&inst_);
+@@ -943,49 +1001,40 @@ class ArcIterator<NGramFst<A>> : public ArcIteratorBase<A> {
+   const Arc &Value() const final {
+     bool eps = (inst_.node_ != 0 && i_ == 0);
+     StateId state = (inst_.node_ == 0) ? i_ : i_ - 1;
+-    if (flags_ & lazy_ & (kArcILabelValue | kArcOLabelValue)) {
++    if (flags_ & (kArcILabelValue | kArcOLabelValue)) {
+       arc_.ilabel = arc_.olabel =
+           eps ? 0 : impl_->future_words_[inst_.offset_ + state];
+-      lazy_ &= ~(kArcILabelValue | kArcOLabelValue);
+     }
+-    if (flags_ & lazy_ & kArcNextStateValue) {
++    if (flags_ & kArcNextStateValue) {
+       if (eps) {
+         arc_.nextstate =
+             impl_->context_index_.Rank1(impl_->context_index_.Select1(
+                 impl_->context_index_.Rank0(inst_.node_) - 1));
+       } else {
+-        if (lazy_ & kArcNextStateValue) {
+-          impl_->SetInstContext(&inst_);  // first time only.
+-        }
+         arc_.nextstate = impl_->Transition(
+             inst_.context_, impl_->future_words_[inst_.offset_ + state]);
+       }
+-      lazy_ &= ~kArcNextStateValue;
+     }
+-    if (flags_ & lazy_ & kArcWeightValue) {
++    if (flags_ & kArcWeightValue) {
+       arc_.weight = eps ? impl_->backoff_[inst_.state_]
+                         : impl_->future_probs_[inst_.offset_ + state];
+-      lazy_ &= ~kArcWeightValue;
+     }
+     return arc_;
+   }
+ 
+   void Next() final {
+     ++i_;
+-    lazy_ = ~0;
+   }
+ 
+   size_t Position() const final { return i_; }
+ 
+   void Reset() final {
+     i_ = 0;
+-    lazy_ = ~0;
+   }
+ 
+   void Seek(size_t a) final {
+     if (i_ != a) {
+       i_ = a;
+-      lazy_ = ~0;
+     }
+   }
+ 
+@@ -998,7 +1047,6 @@ class ArcIterator<NGramFst<A>> : public ArcIteratorBase<A> {
+ 
+  private:
+   mutable Arc arc_;
+-  mutable uint32 lazy_;
+   const internal::NGramFstImpl<A> *impl_;  // Borrowed reference.
+   mutable NGramFstInst<A> inst_;
+ 
+diff --git a/src/include/fst/flags.h b/src/include/fst/flags.h
+index c5e5a7e..bdbd4d3 100644
+--- a/src/include/fst/flags.h
++++ b/src/include/fst/flags.h
+@@ -48,11 +48,11 @@ using std::string;
+ //
+ // ShowUsage() can be used to print out command and flag usage.
+ 
+-#define DECLARE_bool(name) extern bool FLAGS_ ## name
+-#define DECLARE_string(name) extern string FLAGS_ ## name
+-#define DECLARE_int32(name) extern int32 FLAGS_ ## name
+-#define DECLARE_int64(name) extern int64 FLAGS_ ## name
+-#define DECLARE_double(name) extern double FLAGS_ ## name
++#define DECLARE_bool(name) extern OPENFSTDLL bool FLAGS_ ## name
++#define DECLARE_string(name) extern OPENFSTDLL string FLAGS_ ## name
++#define DECLARE_int32(name) extern OPENFSTDLL int32 FLAGS_ ## name
++#define DECLARE_int64(name) extern OPENFSTDLL int64 FLAGS_ ## name
++#define DECLARE_double(name) extern OPENFSTDLL double FLAGS_ ## name
+ 
+ template <typename T>
+ struct FlagDescription {
+@@ -74,7 +74,7 @@ struct FlagDescription {
+ template <typename T>
+ class FlagRegister {
+  public:
+-  static FlagRegister<T> *GetRegister() {
++  static OPENFSTDLL FlagRegister<T> *GetRegister() {
+     static auto reg = new FlagRegister<T>;
+     return reg;
+   }
+diff --git a/src/include/fst/fst.h b/src/include/fst/fst.h
+index 9f0cc3c..c40dade 100644
+--- a/src/include/fst/fst.h
++++ b/src/include/fst/fst.h
+@@ -29,6 +29,7 @@
+ #include <fst/register.h>
+ #include <fst/symbol-table.h>
+ #include <fst/util.h>
++#include <kaldi-crypt.h>
+ 
+ 
+ DECLARE_bool(fst_align);
+@@ -64,6 +65,7 @@ struct FstReadOptions {
+   FileReadMode mode;            // Read or map files (advisory, if possible)
+   bool read_isymbols;           // Read isymbols, if any (default: true).
+   bool read_osymbols;           // Read osymbols, if any (default: true).
++  string md5;			// SHARED_MEMORY
+ 
+   explicit FstReadOptions(const string &source = "<unspecified>",
+                           const FstHeader *header = nullptr,
+@@ -301,7 +303,7 @@ class Fst {
+  protected:
+   bool WriteFile(const string &filename) const {
+     if (!filename.empty()) {
+-      std::ofstream strm(filename,
++      crypt_ofstream<char> strm(filename,
+                                std::ios_base::out | std::ios_base::binary);
+       if (!strm) {
+         LOG(ERROR) << "Fst::Write: Can't open file: " << filename;
+@@ -311,7 +313,8 @@ class Fst {
+       if (!val) LOG(ERROR) << "Fst::Write failed: " << filename;
+       return val;
+     } else {
+-      return Write(std::cout, FstWriteOptions("standard output"));
++      crypt_stdostream<char> ostrm;
++      return Write(ostrm, FstWriteOptions("standard output"));
+     }
+   }
+ };
+diff --git a/src/include/fst/generic-register.h b/src/include/fst/generic-register.h
+index ce6802d..57c42c3 100644
+--- a/src/include/fst/generic-register.h
++++ b/src/include/fst/generic-register.h
+@@ -33,15 +33,19 @@
+ 
+ namespace fst {
+ 
++
+ template <class KeyType, class EntryType, class RegisterType>
+ class GenericRegister {
+  public:
+   using Key = KeyType;
+   using Entry = EntryType;
+ 
+-  static RegisterType *GetRegister() {
+-    static auto reg = new RegisterType;
+-    return reg;
++  static OPENFSTDLL RegisterType *GetRegister() {
++      static auto reg = new RegisterType;
++      return reg;
++//    if (register_ == nullptr)
++//        register_ = new RegisterType;
++//    return register_;
+   }
+ 
+   void SetEntry(const KeyType &key, const EntryType &entry) {
+@@ -103,10 +107,17 @@ class GenericRegister {
+   }
+ 
+  private:
++//  static OPENFSTDLL RegisterType * register_;
+   mutable Mutex register_lock_;
+   std::map<KeyType, EntryType> register_table_;
+ };
+ 
++
++//#if defined OPENFSTEXPORT || defined OPENFSTSTATIC
++//template <class KeyType, class EntryType, class RegisterType>
++//RegisterType * GenericRegister<KeyType, EntryType, RegisterType>::register_ = nullptr;
++//#endif
++
+ // Generic register-er class capable of creating new register entries in the
+ // given RegisterType template parameter. This type must define types Key and
+ // Entry, and have appropriate static GetRegister() and instance SetEntry()
+diff --git a/src/include/fst/label-reachable.h b/src/include/fst/label-reachable.h
+index 4ea711b..ce55432 100644
+--- a/src/include/fst/label-reachable.h
++++ b/src/include/fst/label-reachable.h
+@@ -467,13 +467,40 @@ class LabelReachable {
+     // binary search.
+     aiter->SetFlags(reach_fst_input_ ? kArcILabelValue : kArcOLabelValue,
+                     kArcValueFlags);
++
++    // Quick matching first
++    ssize_t first_low = aiter_begin;
++    aiter->Seek(first_low);
++    auto val = aiter->Value();
++    auto label =
++         reach_fst_input_ ? val.ilabel : val.olabel;
++    if (label >= match_label) {
++      aiter->SetFlags(kArcValueFlags, kArcValueFlags);
++      return first_low;
++    }
++
++    if (aiter_begin < aiter_end) {
++      ssize_t second_low = aiter_begin + 1;
++      aiter->Seek(second_low);
++      auto val = aiter->Value();
++      auto label =
++         reach_fst_input_ ? val.ilabel : val.olabel;
++      if (label >= match_label) {
++        aiter->SetFlags(kArcValueFlags, kArcValueFlags);
++        return second_low;
++      }
++    }
++
+     ssize_t low = aiter_begin;
+     ssize_t high = aiter_end;
+     while (low < high) {
+       ssize_t mid = (low + high) / 2;
+       aiter->Seek(mid);
+-      auto label =
+-          reach_fst_input_ ? aiter->Value().ilabel : aiter->Value().olabel;
++
++      auto val = aiter->Value();
++      label =
++          reach_fst_input_ ? val.ilabel : val.olabel;
++
+       if (label > match_label) {
+         high = mid;
+       } else if (label < match_label) {
+diff --git a/src/include/fst/matcher-fst.h b/src/include/fst/matcher-fst.h
+index 167eb95..1afbcd1 100644
+--- a/src/include/fst/matcher-fst.h
++++ b/src/include/fst/matcher-fst.h
+@@ -313,15 +313,15 @@ class LookAheadMatcher<MatcherFst<F, M, Name, Init>> {
+ 
+ // Useful aliases when using StdArc.
+ 
+-extern const char arc_lookahead_fst_type[];
++extern OPENFSTDLL const char arc_lookahead_fst_type[];
+ 
+ using StdArcLookAheadFst =
+     MatcherFst<ConstFst<StdArc>,
+                ArcLookAheadMatcher<SortedMatcher<ConstFst<StdArc>>>,
+                arc_lookahead_fst_type>;
+ 
+-extern const char ilabel_lookahead_fst_type[];
+-extern const char olabel_lookahead_fst_type[];
++extern const char OPENFSTDLL ilabel_lookahead_fst_type[];
++extern const char OPENFSTDLL olabel_lookahead_fst_type[];
+ 
+ constexpr auto ilabel_lookahead_flags =
+     kInputLookAheadMatcher | kLookAheadWeight | kLookAheadPrefix |
+diff --git a/src/include/fst/mutable-fst.h b/src/include/fst/mutable-fst.h
+index 6577b43..80efcb8 100644
+--- a/src/include/fst/mutable-fst.h
++++ b/src/include/fst/mutable-fst.h
+@@ -129,15 +129,24 @@ class MutableFst : public ExpandedFst<A> {
+                                const string &convert_type = "vector") {
+     if (convert == false) {
+       if (!filename.empty()) {
+-        std::ifstream strm(filename,
+-                                std::ios_base::in | std::ios_base::binary);
++        crypt_ifstream<char> crStream(filename, std::ios_base::in | std::ios_base::binary);
++        std::string data((std::istreambuf_iterator<char>(crStream)),
++                     std::istreambuf_iterator<char>());
++        std::istringstream strm(data);
++        // std::ifstream strm(filename,
++        //                         std::ios_base::in | std::ios_base::binary);
+         if (!strm) {
+           LOG(ERROR) << "MutableFst::Read: Can't open file: " << filename;
+           return nullptr;
+         }
+         return Read(strm, FstReadOptions(filename));
+       } else {
+-        return Read(std::cin, FstReadOptions("standard input"));
++        crypt_stdistream<char> crStream;
++        std::string data((std::istreambuf_iterator<char>(crStream)),
++                     std::istreambuf_iterator<char>());
++        std::istringstream istrm(data);
++        return Read(istrm, FstReadOptions("standard input"));
++        // return Read(std::cin, FstReadOptions("standard input"));
+       }
+     } else {  // Converts to 'convert_type' if not mutable.
+       std::unique_ptr<Fst<Arc>> ifst(Fst<Arc>::Read(filename));
+diff --git a/src/include/fst/properties.h b/src/include/fst/properties.h
+index 11b7436..4757f1f 100644
+--- a/src/include/fst/properties.h
++++ b/src/include/fst/properties.h
+@@ -460,7 +460,7 @@ uint64 AddArcProperties(uint64 inprops, typename Arc::StateId s,
+   return outprops;
+ }
+ 
+-extern const char *PropertyNames[];
++extern OPENFSTDLL const char *PropertyNames[];
+ 
+ }  // namespace fst
+ 
+diff --git a/src/include/fst/symbol-table.h b/src/include/fst/symbol-table.h
+index 3b1a585..bbdb341 100644
+--- a/src/include/fst/symbol-table.h
++++ b/src/include/fst/symbol-table.h
+@@ -18,6 +18,7 @@
+ 
+ #include <fst/compat.h>
+ #include <fst/log.h>
++#include <kaldi-crypt.h>
+ #include <fstream>
+ #include <map>
+ 
+@@ -243,7 +244,13 @@ class SymbolTable {
+   // Reads a text representation of the symbol table.
+   static SymbolTable *ReadText(const string &filename,
+       const SymbolTableTextOptions &opts = SymbolTableTextOptions()) {
+-    std::ifstream strm(filename, std::ios_base::in);
++
++    crypt_ifstream<char> crStream(filename, std::ios_base::in);
++    std::string data((std::istreambuf_iterator<char>(crStream)),
++                 std::istreambuf_iterator<char>());
++    std::istringstream strm(data);
++    // std::ifstream strm(filename, std::ios_base::in);
++
+     if (!strm.good()) {
+       LOG(ERROR) << "SymbolTable::ReadText: Can't open file " << filename;
+       return nullptr;
+diff --git a/src/include/fst/types.h b/src/include/fst/types.h
+index 0c92ca3..3768c8f 100644
+--- a/src/include/fst/types.h
++++ b/src/include/fst/types.h
+@@ -38,4 +38,17 @@ using uint64 = uint64_t;
+ using ssize_t = std::ptrdiff_t;
+ #endif  // _MSC_VER
+ 
++#ifdef _MSC_VER
++#ifdef OPENFSTSTATIC
++    #define OPENFSTDLL
++#elif OPENFSTEXPORT
++    #define  OPENFSTDLL  __declspec(dllexport)
++#else
++    #define  OPENFSTDLL __declspec(dllimport)
++#endif
++#else
++#define OPENFSTDLL
++#endif
++
++
+ #endif  // FST_LIB_TYPES_H_
+diff --git a/src/include/fst/vector-fst.h b/src/include/fst/vector-fst.h
+index d8e6ca5..e95f90b 100644
+--- a/src/include/fst/vector-fst.h
++++ b/src/include/fst/vector-fst.h
+@@ -16,6 +16,8 @@
+ #include <fst/mutable-fst.h>
+ #include <fst/test-properties.h>
+ 
++#include <fst/shm.h>  // SHARED_MEMORY
++
+ 
+ namespace fst {
+ 
+@@ -124,6 +126,26 @@ class VectorState {
+   std::vector<A, ArcAllocator> arcs_;  // Arc container.
+ };
+ 
++
++// !SHARED_MEMORY
++// Arcs implemented by an STL vector per state.
++template <class A>
++struct SharedVectorState {
++  typedef A Arc;
++  typedef typename A::Weight Weight;
++  typedef typename A::StateId StateId;
++
++  SharedVectorState() : final(Weight::Zero()), niepsilons(0), noepsilons(0) {}
++
++  Weight final;              // Final weight
++  size_t arcs_size;       // arcs array size
++  boost::interprocess::offset_ptr<A> arcs;     // pointer on arks_array
++  size_t niepsilons;         // # of input epsilons
++  size_t noepsilons;         // # of output epsilons
++};
++// /SHARED_MEMORY
++
++
+ namespace internal {
+ 
+ // States are implemented by STL vectors, templated on the
+@@ -136,7 +158,12 @@ class VectorFstBaseImpl : public FstImpl<typename S::Arc> {
+   using StateId = typename Arc::StateId;
+   using Weight = typename Arc::Weight;
+ 
+-  VectorFstBaseImpl() : start_(kNoStateId) {}
++  struct SharedStatesHeader{
++   StateId start_;              // initial state
++   std::size_t size;            // vector size
++  };
++
++  VectorFstBaseImpl() : start_(kNoStateId), shared_states_(NULL), shared_states_array(NULL) {}
+ 
+   ~VectorFstBaseImpl() override {
+     for (StateId s = 0; s < states_.size(); ++s) {
+@@ -144,20 +171,20 @@ class VectorFstBaseImpl : public FstImpl<typename S::Arc> {
+     }
+   }
+ 
+-  StateId Start() const { return start_; }
++  StateId Start() const { return shared_states_ ? shared_states_->start_ : start_; }
+ 
+-  Weight Final(StateId state) const { return states_[state]->Final(); }
++  Weight Final(StateId state) const { return shared_states_ ? shared_states_array[state].final : states_[state]->Final(); }
+ 
+-  StateId NumStates() const { return states_.size(); }
++  StateId NumStates() const { return shared_states_ ? shared_states_->size : states_.size(); }
+ 
+-  size_t NumArcs(StateId state) const { return states_[state]->NumArcs(); }
++  size_t NumArcs(StateId state) const { return shared_states_ ? shared_states_array[state].arcs_size : states_[state]->NumArcs(); }
+ 
+   size_t NumInputEpsilons(StateId state) const {
+-    return GetState(state)->NumInputEpsilons();
++    return shared_states_ ? shared_states_array[state].niepsilons : states_[state]->NumInputEpsilons();
+   }
+ 
+   size_t NumOutputEpsilons(StateId state) const {
+-    return GetState(state)->NumOutputEpsilons();
++    return shared_states_ ? shared_states_array[state].noepsilons : states_[state]->NumOutputEpsilons();
+   }
+ 
+   void SetStart(StateId state) { start_ = state; }
+@@ -240,23 +267,85 @@ class VectorFstBaseImpl : public FstImpl<typename S::Arc> {
+   // Provide information needed for generic state iterator.
+   void InitStateIterator(StateIteratorData<Arc> *data) const {
+     data->base = nullptr;
+-    data->nstates = states_.size();
++    data->nstates = shared_states_ ? shared_states_->size : states_.size();
+   }
+ 
+   // Provide information needed for generic arc iterator.
+   void InitArcIterator(StateId state, ArcIteratorData<Arc> *data) const {
+     data->base = nullptr;
+-    data->narcs = states_[state]->NumArcs();
+-    data->arcs = states_[state]->Arcs();
++
++    if (shared_states_) {
++      data->narcs = shared_states_array[state].arcs_size;
++      data->arcs = data->narcs > 0 ? &shared_states_array[state].arcs[0] : 0;
++    } else  {
++      data->narcs = states_[state]->NumArcs();
++      data->arcs = states_[state]->Arcs();
++    }
+     data->ref_count = nullptr;
+   }
+ 
++  void make_shared(ShmModelsManagerBase::Model & model) {
++    shared_data = model;
++
++    //память существует
++    if ( !model->is_empty() ) {
++        shared_states_ = reinterpret_cast<SharedStatesHeader *>(shared_data->get_data());
++	    shared_states_array = reinterpret_cast<SharedVectorState<Arc> *>(&shared_states_[1]);
++    //новая память
++    } else {
++      //подсчёт размера шаренной памяти
++      std::size_t common_size(sizeof(SharedStatesHeader) + states_.size() * sizeof(SharedVectorState<Arc>));
++
++      for (StateId s = 0; s < states_.size(); ++s) {
++		  common_size += states_[s]->NumArcs() * sizeof(Arc);
++      }
++
++      //Разместим всё во временном буффере
++      shared_data->create_memory(common_size);
++      shared_states_ = reinterpret_cast<SharedStatesHeader *>(shared_data->get_data());
++	  shared_states_array = reinterpret_cast<SharedVectorState<Arc> *>(&shared_states_[1]);
++
++	  //заполним память данными
++      shared_states_->start_ = start_;
++      shared_states_->size = states_.size();
++
++      //заполняем массивы состояний и арков
++      SharedVectorState<Arc> * state_ptr = shared_states_array;
++      Arc * ark_ptr = reinterpret_cast<Arc *>(&shared_states_array[shared_states_->size]);
++
++      for (StateId s = 0; s < states_.size(); ++s) {
++		state_ptr->final = states_[s]->Final();
++		state_ptr->arcs_size = states_[s]->NumArcs();
++		state_ptr->niepsilons = states_[s]->NumInputEpsilons();
++		state_ptr->noepsilons = states_[s]->NumOutputEpsilons();
++        state_ptr->arcs = boost::interprocess::offset_ptr<Arc>(ark_ptr);
++        state_ptr++;
++
++		const Arc * arcs(states_[s]->Arcs());
++
++        //заполним арки
++		for (size_t i = 0; i < states_[s]->NumArcs(); ++i) {
++          *ark_ptr = arcs[i];
++          ark_ptr++;
++        }
++      }
++    }
++
++    //удам основные данные
++    DeleteStates();
++	vector<State *>().swap(states_);
++  }
++
+  private:
+   std::vector<State *> states_;                 // States represenation.
+   StateId start_;                               // Initial state.
+   typename State::StateAllocator state_alloc_;  // For state allocation.
+   typename State::ArcAllocator arc_alloc_;      // For arc allocation.
+ 
++  SharedStatesHeader * shared_states_;
++  SharedVectorState<Arc> * shared_states_array;
++  ShmModelsManagerBase::Model shared_data;
++
+   VectorFstBaseImpl(const VectorFstBaseImpl &) = delete;
+   VectorFstBaseImpl &operator=(const VectorFstBaseImpl &) = delete;
+ };
+@@ -348,6 +437,8 @@ class VectorFstImpl : public VectorFstBaseImpl<S> {
+  private:
+   // Minimum file format version supported.
+   static constexpr int kMinFileVersion = 2;
++
++  static VectorFstImpl<S> * read_internal(istream &strm, const FstReadOptions &opts);
+ };
+ 
+ template <class S>
+@@ -379,8 +470,37 @@ VectorFstImpl<S>::VectorFstImpl(const Fst<Arc> &fst) {
+ }
+ 
+ template <class S>
+-VectorFstImpl<S> *VectorFstImpl<S>::Read(std::istream &strm,
+-                                         const FstReadOptions &opts) {
++VectorFstImpl<S> *VectorFstImpl<S>::Read(istream &strm, const FstReadOptions &opts) {
++  //проверка создания шаренного вектора
++  std::string md5(opts.md5);
++
++  if (!md5.empty()) {
++    ShmModelsManagerBase::Model model = ShmModelsManagerBase::get_instance().create_model_empty(md5);
++
++    boost::interprocess::scoped_lock<boost::interprocess::interprocess_upgradable_mutex> lock(*model->get_mutex());
++    //модель существует
++    if (!model->is_empty() ) {
++		std::cerr << model->get_name() << " mapping" << std::endl;
++		VectorFstImpl<S> *impl = new VectorFstImpl;
++		  impl->make_shared(model);
++		std::cerr << "mapping complete" << std::endl;
++		return impl;
++    //модель ещё не созданна, грузим модель.
++    } else {
++		std::cerr << model->get_name() << " sharing" << std::endl;
++		VectorFstImpl<S> *impl = read_internal(strm, opts);
++	    if (impl != NULL) {
++		    impl->make_shared(model);
++		}
++		std::cerr << "sharing complete" << std::endl;
++	    return impl;
++    }
++  }
++  return read_internal(strm, opts);
++}
++
++template <class S>
++VectorFstImpl<S> *VectorFstImpl<S>::read_internal(istream &strm, const FstReadOptions &opts) {
+   std::unique_ptr<VectorFstImpl<S>> impl(new VectorFstImpl());
+   FstHeader hdr;
+   if (!impl->ReadHeader(strm, opts, kMinFileVersion, &hdr)) return nullptr;
+@@ -414,6 +534,7 @@ VectorFstImpl<S> *VectorFstImpl<S>::Read(std::istream &strm,
+     }
+   }
+   if (hdr.NumStates() != kNoStateId && state != hdr.NumStates()) {
++    std::cout <<"q3 " <<kNoStateId <<hdr.NumStates() <<std::endl;
+     LOG(ERROR) << "VectorFst::Read: Unexpected end of file: " << opts.source;
+     return nullptr;
+   }
+@@ -552,7 +673,7 @@ bool VectorFst<Arc, State>::WriteFst(const FST &fst, std::ostream &strm,
+     }
+     ++num_states;
+   }
+-  strm.flush();
++  // strm.flush();
+   if (!strm) {
+     LOG(ERROR) << "VectorFst::Write: Write failed: " << opts.source;
+     return false;
+diff --git a/src/lib/Makefile.am b/src/lib/Makefile.am
+index 835b127..2782afa 100644
+--- a/src/lib/Makefile.am
++++ b/src/lib/Makefile.am
+@@ -1,7 +1,7 @@
+-AM_CPPFLAGS = -I$(srcdir)/../include $(ICU_CPPFLAGS)
++AM_CPPFLAGS = -I$(srcdir)/../include $(ICU_CPPFLAGS) -I$(abs_top_srcdir)/../../src
+ 
+ lib_LTLIBRARIES = libfst.la
+-libfst_la_SOURCES = compat.cc flags.cc fst.cc properties.cc symbol-table.cc util.cc \
++libfst_la_SOURCES = shm.cc compat.cc flags.cc fst.cc properties.cc symbol-table.cc util.cc \
+                     symbol-table-ops.cc mapped-file.cc weight.cc
+-libfst_la_LDFLAGS = -version-info 8:0:0
++libfst_la_LDFLAGS = -version-info 8:0:0 -lpthread -lrt
+ libfst_la_LIBADD = $(DL_LIBS)
+diff --git a/src/lib/Makefile.in b/src/lib/Makefile.in
+index 893937c..efb9f0f 100644
+--- a/src/lib/Makefile.in
++++ b/src/lib/Makefile.in
+@@ -124,7 +124,7 @@ am__installdirs = "$(DESTDIR)$(libdir)"
+ LTLIBRARIES = $(lib_LTLIBRARIES)
+ am__DEPENDENCIES_1 =
+ libfst_la_DEPENDENCIES = $(am__DEPENDENCIES_1)
+-am_libfst_la_OBJECTS = compat.lo flags.lo fst.lo properties.lo \
++am_libfst_la_OBJECTS = shm.lo compat.lo flags.lo fst.lo properties.lo \
+ 	symbol-table.lo util.lo symbol-table-ops.lo mapped-file.lo \
+ 	weight.lo
+ libfst_la_OBJECTS = $(am_libfst_la_OBJECTS)
+@@ -323,6 +323,7 @@ program_transform_name = @program_transform_name@
+ psdir = @psdir@
+ pyexecdir = @pyexecdir@
+ pythondir = @pythondir@
++runstatedir = @runstatedir@
+ sbindir = @sbindir@
+ sharedstatedir = @sharedstatedir@
+ srcdir = @srcdir@
+@@ -331,12 +332,12 @@ target_alias = @target_alias@
+ top_build_prefix = @top_build_prefix@
+ top_builddir = @top_builddir@
+ top_srcdir = @top_srcdir@
+-AM_CPPFLAGS = -I$(srcdir)/../include $(ICU_CPPFLAGS)
++AM_CPPFLAGS = -I$(srcdir)/../include $(ICU_CPPFLAGS) -I$(abs_top_srcdir)/../../src
+ lib_LTLIBRARIES = libfst.la
+-libfst_la_SOURCES = compat.cc flags.cc fst.cc properties.cc symbol-table.cc util.cc \
++libfst_la_SOURCES = shm.cc compat.cc flags.cc fst.cc properties.cc symbol-table.cc util.cc \
+                     symbol-table-ops.cc mapped-file.cc weight.cc
+ 
+-libfst_la_LDFLAGS = -version-info 8:0:0
++libfst_la_LDFLAGS = -version-info 8:0:0 -lpthread -lrt
+ libfst_la_LIBADD = $(DL_LIBS)
+ all: all-am
+ 
+@@ -422,6 +423,7 @@ distclean-compile:
+ @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/fst.Plo@am__quote@
+ @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/mapped-file.Plo@am__quote@
+ @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/properties.Plo@am__quote@
++@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/shm.Plo@am__quote@
+ @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/symbol-table-ops.Plo@am__quote@
+ @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/symbol-table.Plo@am__quote@
+ @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/util.Plo@am__quote@
+diff --git a/src/lib/libfst.vcxproj b/src/lib/libfst.vcxproj
+index 4c28e83..fbcff3d 100644
+--- a/src/lib/libfst.vcxproj
++++ b/src/lib/libfst.vcxproj
+@@ -24,6 +24,7 @@
+     <ClCompile Include="fst.cc" />
+     <ClCompile Include="mapped-file.cc" />
+     <ClCompile Include="properties.cc" />
++    <ClCompile Include="shm.cc" />
+     <ClCompile Include="symbol-table-ops.cc" />
+     <ClCompile Include="symbol-table.cc" />
+     <ClCompile Include="util.cc" />
+@@ -138,30 +139,30 @@
+     <ProjectGuid>{DE80EFEC-9ED9-4631-BD96-8568C31ED26D}</ProjectGuid>
+     <Keyword>Win32Proj</Keyword>
+     <RootNamespace>fst</RootNamespace>
+-    <WindowsTargetPlatformVersion>8.1</WindowsTargetPlatformVersion>
++    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
+     <ProjectName>libfst</ProjectName>
+   </PropertyGroup>
+   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
+     <ConfigurationType>StaticLibrary</ConfigurationType>
+     <UseDebugLibraries>true</UseDebugLibraries>
+-    <PlatformToolset>v140</PlatformToolset>
++    <PlatformToolset>v141</PlatformToolset>
+   </PropertyGroup>
+   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
+     <ConfigurationType>StaticLibrary</ConfigurationType>
+     <UseDebugLibraries>false</UseDebugLibraries>
+-    <PlatformToolset>v140</PlatformToolset>
++    <PlatformToolset>v141</PlatformToolset>
+     <WholeProgramOptimization>true</WholeProgramOptimization>
+   </PropertyGroup>
+   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+     <ConfigurationType>StaticLibrary</ConfigurationType>
+     <UseDebugLibraries>true</UseDebugLibraries>
+-    <PlatformToolset>v140</PlatformToolset>
++    <PlatformToolset>v141</PlatformToolset>
+   </PropertyGroup>
+   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+     <ConfigurationType>StaticLibrary</ConfigurationType>
+     <UseDebugLibraries>false</UseDebugLibraries>
+-    <PlatformToolset>v140</PlatformToolset>
++    <PlatformToolset>v142</PlatformToolset>
+     <WholeProgramOptimization>true</WholeProgramOptimization>
+   </PropertyGroup>
+   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+@@ -252,8 +253,8 @@
+       <Optimization>MaxSpeed</Optimization>
+       <FunctionLevelLinking>true</FunctionLevelLinking>
+       <IntrinsicFunctions>true</IntrinsicFunctions>
+-      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+-      <AdditionalIncludeDirectories>..\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
++      <PreprocessorDefinitions>FST_NO_DYNAMIC_LINKING;OPENFSTSTATIC;NOMINMAX;_CRT_SECURE_NO_WARNINGS;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
++      <AdditionalIncludeDirectories>..\..\..\..\..\usr\include;..\..\..\..\..\..\src;..\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+       <DisableSpecificWarnings>4018;4099;4244;4267;4291;4305;4396;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+       <RuntimeTypeInfo>true</RuntimeTypeInfo>
+       <DebugInformationFormat>OldStyle</DebugInformationFormat>
+diff --git a/src/lib/libfst.vcxproj.filters b/src/lib/libfst.vcxproj.filters
+index 44020d4..b265ec4 100644
+--- a/src/lib/libfst.vcxproj.filters
++++ b/src/lib/libfst.vcxproj.filters
+@@ -38,6 +38,9 @@
+     <ClCompile Include="mapped-file.cc">
+       <Filter>Source Files</Filter>
+     </ClCompile>
++    <ClCompile Include="shm.cc">
++      <Filter>Source Files</Filter>
++    </ClCompile>
+   </ItemGroup>
+   <ItemGroup>
+     <ClInclude Include="..\include\fst\accumulator.h">
+diff --git a/src/lib/mapped-file.cc b/src/lib/mapped-file.cc
+index cec725a..c31d289 100644
+--- a/src/lib/mapped-file.cc
++++ b/src/lib/mapped-file.cc
+@@ -1,24 +1,127 @@
++// See www.openfst.org for extensive documentation on this weighted
++// finite-state transducer library.
++//
++
+ #include <fst/mapped-file.h>
+ 
++#include <errno.h>
++#include <fcntl.h>
++#if !defined _MSC_VER && !defined WIN32 && !defined _WIN32
++#include <sys/mman.h>
++#include <unistd.h>
++#endif
++#include <algorithm>
++#include <ios>
++#include <memory>
++
++#include <fst/log.h>
++
+ namespace fst {
+ 
+-MappedFile::MappedFile(const MemoryRegion &region) : region_(region) {
+-}
++MappedFile::MappedFile(const MemoryRegion &region) : region_(region) {}
+ 
+ MappedFile::~MappedFile() {
++  if (region_.size != 0) {
++    if (region_.mmap) {
++#if !defined _MSC_VER && !defined WIN32 && !defined _WIN32
++      VLOG(1) << "munmap'ed " << region_.size << " bytes at " << region_.mmap;
++      if (munmap(region_.mmap, region_.size) != 0) {
++        LOG(ERROR) << "Failed to unmap region: " << strerror(errno);
++      }
++#endif
++    } else {
++      if (region_.data) {
++        operator delete(static_cast<char *>(region_.data) - region_.offset);
++      }
++    }
++  }
+ }
+ 
+-MappedFile* MappedFile::Map(std::istream *istrm, bool memorymap,
++MappedFile *MappedFile::Map(std::istream *istrm, bool memorymap,
+                             const string &source, size_t size) {
+-  return NULL;
++  const auto spos = istrm->tellg();
++  VLOG(1) << "memorymap: " << (memorymap ? "true" : "false") << " source: \""
++          << source << "\""
++          << " size: " << size << " offset: " << spos;
++#if !defined _MSC_VER && !defined WIN32 && !defined _WIN32
++  if (memorymap && spos >= 0 && spos % kArchAlignment == 0) {
++    const size_t pos = spos;
++    int fd = open(source.c_str(), O_RDONLY);
++    if (fd != -1) {
++      const int pagesize = sysconf(_SC_PAGESIZE);
++      const off_t offset = pos % pagesize;
++      const off_t upsize = size + offset;
++      void *map =
++          mmap(nullptr, upsize, PROT_READ, MAP_SHARED, fd, pos - offset);
++      auto *data = reinterpret_cast<char *>(map);
++      if (close(fd) == 0 && map != MAP_FAILED) {
++        MemoryRegion region;
++        region.mmap = map;
++        region.size = upsize;
++        region.data = reinterpret_cast<void *>(data + offset);
++        region.offset = offset;
++        std::unique_ptr<MappedFile> mmf(new MappedFile(region));
++        istrm->seekg(pos + size, std::ios::beg);
++        if (istrm) {
++          VLOG(1) << "mmap'ed region of " << size << " at offset " << pos
++                  << " from " << source << " to addr " << map;
++          return mmf.release();
++        }
++      } else {
++        LOG(INFO) << "Mapping of file failed: " << strerror(errno);
++      }
++    }
++  }
++  // If all else fails, reads from the file into the allocated buffer.
++  if (memorymap) {
++    LOG(WARNING) << "File mapping at offset " << spos << " of file " << source
++                 << " could not be honored, reading instead";
++  }
++#endif
++  // Reads the file into the buffer in chunks not larger than kMaxReadChunk.
++  std::unique_ptr<MappedFile> mf(Allocate(size));
++  auto *buffer = reinterpret_cast<char *>(mf->mutable_data());
++  while (size > 0) {
++    const auto next_size = std::min(size, kMaxReadChunk);
++    const auto current_pos = istrm->tellg();
++    if (!istrm->read(buffer, next_size)) {
++      LOG(ERROR) << "Failed to read " << next_size << " bytes at offset "
++                 << current_pos << "from \"" << source << "\"";
++      return nullptr;
++    }
++    size -= next_size;
++    buffer += next_size;
++    VLOG(2) << "Read " << next_size << " bytes. " << size << " remaining";
++  }
++  return mf.release();
+ }
+ 
+-MappedFile* MappedFile::Allocate(size_t size, int align) {
+-  return NULL;
++MappedFile *MappedFile::Allocate(size_t size, int align) {
++  MemoryRegion region;
++  region.data = nullptr;
++  region.offset = 0;
++  if (size > 0) {
++    char *buffer = static_cast<char *>(operator new(size + align));
++    size_t address = reinterpret_cast<size_t>(buffer);
++    region.offset = kArchAlignment - (address % align);
++    region.data = buffer + region.offset;
++  }
++  region.mmap = nullptr;
++  region.size = size;
++  return new MappedFile(region);
+ }
+ 
+-MappedFile* MappedFile::Borrow(void *data) {
+-  return NULL;
++MappedFile *MappedFile::Borrow(void *data) {
++  MemoryRegion region;
++  region.data = data;
++  region.mmap = data;
++  region.size = 0;
++  region.offset = 0;
++  return new MappedFile(region);
+ }
+ 
++constexpr int MappedFile::kArchAlignment;
++
++constexpr size_t MappedFile::kMaxReadChunk;
++
+ }  // namespace fst
+diff --git a/src/lib/symbol-table.cc b/src/lib/symbol-table.cc
+index bee1202..f54a472 100644
+--- a/src/lib/symbol-table.cc
++++ b/src/lib/symbol-table.cc
+@@ -210,7 +210,7 @@ bool SymbolTableImpl::Write(std::ostream &strm) const {
+     WriteType(strm, symbols_.GetSymbol(i));
+     WriteType(strm, key);
+   }
+-  strm.flush();
++  // strm.flush();
+   if (strm.fail()) {
+     LOG(ERROR) << "SymbolTable::Write: Write failed";
+     return false;
+diff --git a/src/script/Makefile.am b/src/script/Makefile.am
+index 85df5c1..cd86b59 100644
+--- a/src/script/Makefile.am
++++ b/src/script/Makefile.am
+@@ -1,4 +1,4 @@
+-AM_CPPFLAGS = -I$(srcdir)/../include $(ICU_CPPFLAGS)
++AM_CPPFLAGS = -I$(srcdir)/../include $(ICU_CPPFLAGS) -I$(abs_top_srcdir)/../../src
+ 
+ if HAVE_SCRIPT
+ lib_LTLIBRARIES = libfstscript.la
+diff --git a/src/script/Makefile.in b/src/script/Makefile.in
+index 34f4ca9..3a4f05c 100644
+--- a/src/script/Makefile.in
++++ b/src/script/Makefile.in
+@@ -349,6 +349,7 @@ program_transform_name = @program_transform_name@
+ psdir = @psdir@
+ pyexecdir = @pyexecdir@
+ pythondir = @pythondir@
++runstatedir = @runstatedir@
+ sbindir = @sbindir@
+ sharedstatedir = @sharedstatedir@
+ srcdir = @srcdir@
+@@ -357,7 +358,7 @@ target_alias = @target_alias@
+ top_build_prefix = @top_build_prefix@
+ top_builddir = @top_builddir@
+ top_srcdir = @top_srcdir@
+-AM_CPPFLAGS = -I$(srcdir)/../include $(ICU_CPPFLAGS)
++AM_CPPFLAGS = -I$(srcdir)/../include $(ICU_CPPFLAGS) -I$(abs_top_srcdir)/../../src
+ @HAVE_SCRIPT_TRUE@lib_LTLIBRARIES = libfstscript.la
+ @HAVE_SCRIPT_TRUE@libfstscript_la_SOURCES = arciterator-class.cc arcsort.cc closure.cc        \
+ @HAVE_SCRIPT_TRUE@compile.cc compose.cc concat.cc connect.cc convert.cc decode.cc             \
+diff --git a/src/script/fst-class.cc b/src/script/fst-class.cc
+index ced06de..0d12fba 100644
+--- a/src/script/fst-class.cc
++++ b/src/script/fst-class.cc
+@@ -16,6 +16,8 @@
+ #include <fst/script/fst-class.h>
+ #include <fst/script/register.h>
+ 
++#include <kaldi-crypt.h>
++
+ namespace fst {
+ namespace script {
+ 
+@@ -48,10 +50,17 @@ FstT *ReadFst(std::istream &istrm, const string &fname) {
+ 
+ FstClass *FstClass::Read(const string &fname) {
+   if (!fname.empty()) {
+-    std::ifstream istrm(fname, std::ios_base::in | std::ios_base::binary);
++    crypt_ifstream<char> crStream(fname, std::ios_base::in | std::ios_base::binary);
++    std::string data((std::istreambuf_iterator<char>(crStream)),
++                 std::istreambuf_iterator<char>());
++    std::istringstream istrm(data);
+     return ReadFst<FstClass>(istrm, fname);
+   } else {
+-    return ReadFst<FstClass>(std::cin, "standard input");
++    crypt_stdistream<char> crStream;
++    std::string data((std::istreambuf_iterator<char>(crStream)),
++                 std::istreambuf_iterator<char>());
++    std::istringstream istrm(data);
++    return ReadFst<FstClass>(istrm, "standard input");
+   }
+ }
+ 
+@@ -85,10 +94,17 @@ bool FstClass::WeightTypesMatch(const WeightClass &weight,
+ MutableFstClass *MutableFstClass::Read(const string &fname, bool convert) {
+   if (convert == false) {
+     if (!fname.empty()) {
+-      std::ifstream in(fname, std::ios_base::in | std::ios_base::binary);
+-      return ReadFst<MutableFstClass>(in, fname);
++      crypt_ifstream<char> crStream(fname, std::ios_base::in | std::ios_base::binary);
++      std::string data((std::istreambuf_iterator<char>(crStream)),
++                 std::istreambuf_iterator<char>());
++      std::istringstream strm(data);
++      return ReadFst<MutableFstClass>(strm, fname);
+     } else {
+-      return ReadFst<MutableFstClass>(std::cin, "standard input");
++      crypt_stdistream<char> crStream;
++      std::string data((std::istreambuf_iterator<char>(crStream)),
++                 std::istreambuf_iterator<char>());
++      std::istringstream istrm(data);
++      return ReadFst<MutableFstClass>(istrm, "standard input");
+     }
+   } else {  // Converts to VectorFstClass if not mutable.
+     FstClass *ifst = FstClass::Read(fname);
+diff --git a/src/test/Makefile.in b/src/test/Makefile.in
+index 670e907..ac18ce7 100644
+--- a/src/test/Makefile.in
++++ b/src/test/Makefile.in
+@@ -553,6 +553,7 @@ program_transform_name = @program_transform_name@
+ psdir = @psdir@
+ pyexecdir = @pyexecdir@
+ pythondir = @pythondir@
++runstatedir = @runstatedir@
+ sbindir = @sbindir@
+ sharedstatedir = @sharedstatedir@
+ srcdir = @srcdir@
+diff --git a/src/test/fst_test.cc b/src/test/fst_test.cc
+index 7176929..01b9e9b 100644
+--- a/src/test/fst_test.cc
++++ b/src/test/fst_test.cc
+@@ -74,18 +74,21 @@ class CustomCompactor {
+   }
+ };
+ 
++#ifndef _MSC_VER
+ REGISTER_FST(VectorFst, CustomArc);
+ REGISTER_FST(ConstFst, CustomArc);
++#endif
+ static fst::FstRegisterer<CompactFst<StdArc, CustomCompactor<StdArc>>>
+     CompactFst_StdArc_CustomCompactor_registerer;
++#ifndef _MSC_VER
+ static fst::FstRegisterer<CompactFst<CustomArc, CustomCompactor<CustomArc>>>
+     CompactFst_CustomArc_CustomCompactor_registerer;
++#endif
+ static fst::FstRegisterer<ConstFst<StdArc, uint16>>
+     ConstFst_StdArc_uint16_registerer;
+ static fst::FstRegisterer<
+     CompactFst<StdArc, CustomCompactor<StdArc>, uint16>>
+     CompactFst_StdArc_CustomCompactor_uint16_registerer;
+-
+ }  // namespace
+ }  // namespace fst
+ 
+@@ -96,7 +99,9 @@ using fst::MatcherFst;
+ using fst::CompactFst;
+ using fst::Fst;
+ using fst::StdArc;
++#ifndef _MSC_VER
+ using fst::CustomArc;
++#endif
+ using fst::CustomCompactor;
+ using fst::StdArcLookAheadFst;
+ using fst::EditFst;
+@@ -126,6 +131,7 @@ int main(int argc, char **argv) {
+     std_const_tester.TestIO();
+   }
+ 
++#ifndef _MSC_VER
+   // CompactFst<StdArc, CustomCompactor<StdArc>>
+   {
+     FstTester<CompactFst<StdArc, CustomCompactor<StdArc>>> std_compact_tester;
+@@ -134,7 +140,6 @@ int main(int argc, char **argv) {
+     std_compact_tester.TestCopy();
+     std_compact_tester.TestIO();
+   }
+-
+   // VectorFst<CustomArc> tests
+   {
+     FstTester<VectorFst<CustomArc>> std_vector_tester;
+@@ -164,7 +169,7 @@ int main(int argc, char **argv) {
+     std_compact_tester.TestCopy();
+     std_compact_tester.TestIO();
+   }
+-
++#endif
+   // ConstFst<StdArc, uint16> tests
+   {
+     FstTester<ConstFst<StdArc, uint16>> std_const_tester;
+@@ -174,6 +179,7 @@ int main(int argc, char **argv) {
+     std_const_tester.TestIO();
+   }
+ 
++#ifndef _MSC_VER
+   // CompactFst<StdArc, CustomCompactor<StdArc>, uint16>
+   {
+     FstTester<CompactFst<StdArc, CustomCompactor<StdArc>, uint16>>
+@@ -183,6 +189,7 @@ int main(int argc, char **argv) {
+     std_compact_tester.TestCopy();
+     std_compact_tester.TestIO();
+   }
++#endif
+ 
+   // FstTester<StdArcLookAheadFst>
+   {
+diff --git a/src/test/fst_test.h b/src/test/fst_test.h
+index 7d536d9..3343117 100644
+--- a/src/test/fst_test.h
++++ b/src/test/fst_test.h
+@@ -217,13 +217,13 @@ class FstTester {
+     {
+       // check mmaping by first writing the file with the aligned attribute set
+       {
+-        std::ofstream ostr(aligned);
++        std::ofstream ostr(aligned, std::ios_base::out | std::ios_base::binary);
+         FstWriteOptions opts;
+         opts.source = aligned;
+         opts.align = true;
+         CHECK(fst.Write(ostr, opts));
+       }
+-      std::ifstream istr(aligned);
++      std::ifstream istr(aligned, std::ios_base::in | std::ios_base::binary);
+       FstReadOptions opts;
+       opts.mode = FstReadOptions::ReadMode("map");
+       opts.source = aligned;
+@@ -236,13 +236,13 @@ class FstTester {
+     // check mmaping of unaligned files to make sure it does not fail.
+     {
+       {
+-        std::ofstream ostr(aligned);
++        std::ofstream ostr(aligned, std::ios_base::out | std::ios_base::binary);
+         FstWriteOptions opts;
+         opts.source = aligned;
+         opts.align = false;
+         CHECK(fst.Write(ostr, opts));
+       }
+-      std::ifstream istr(aligned);
++      std::ifstream istr(aligned, std::ios_base::in | std::ios_base::binary);
+       FstReadOptions opts;
+       opts.mode = FstReadOptions::ReadMode("map");
+       opts.source = aligned;

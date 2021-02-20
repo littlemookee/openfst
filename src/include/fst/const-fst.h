@@ -402,7 +402,7 @@ bool ConstFst<Arc, Unsigned>::WriteFst(const FST &fst, std::ostream &strm,
       strm.write(reinterpret_cast<const char *>(&arc), sizeof(arc));
     }
   }
-  strm.flush();
+  // strm.flush();
   if (!strm) {
     LOG(ERROR) << "ConstFst::WriteFst: write failed: " << opts.source;
     return false;

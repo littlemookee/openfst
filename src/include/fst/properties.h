@@ -460,7 +460,7 @@ uint64 AddArcProperties(uint64 inprops, typename Arc::StateId s,
   return outprops;
 }
 
-extern const char *PropertyNames[];
+extern OPENFSTDLL const char *PropertyNames[];
 
 }  // namespace fst
 

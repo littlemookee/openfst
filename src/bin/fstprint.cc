@@ -9,6 +9,7 @@
 #include <memory>
 #include <ostream>
 #include <string>
+#include <kaldi-crypt.h>
 
 #include <fst/log.h>
 #include <fst/script/print.h>
@@ -51,7 +52,8 @@ int main(int argc, char **argv) {
   if (!fst) return 1;
 
   string dest = "standard output";
-  std::ofstream fstrm;
+  crypt_ofstream<char> fstrm;
+  // std::ofstream fstrm;
   if (argc == 3) {
     fstrm.open(argv[2]);
     if (!fstrm) {
@@ -60,7 +62,8 @@ int main(int argc, char **argv) {
     }
     dest = argv[2];
   }
-  std::ostream &ostrm = fstrm.is_open() ? fstrm : std::cout;
+  // std::ostream &ostrm = fstrm.is_open() ? fstrm : std::cout;
+  std::ostream &ostrm = fstrm.is_open() ? static_cast<std::ostream&>(fstrm) : static_cast<std::ostream&>(*(new crypt_stdostream<char>()));
   ostrm.precision(9);
 
   const SymbolTableTextOptions opts(FLAGS_allow_negative_labels);

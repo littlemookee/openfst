@@ -16,6 +16,8 @@
 #include <fst/script/fst-class.h>
 #include <fst/script/register.h>
 
+#include <kaldi-crypt.h>
+
 namespace fst {
 namespace script {
 
@@ -48,10 +50,17 @@ FstT *ReadFst(std::istream &istrm, const string &fname) {
 
 FstClass *FstClass::Read(const string &fname) {
   if (!fname.empty()) {
-    std::ifstream istrm(fname, std::ios_base::in | std::ios_base::binary);
+    crypt_ifstream<char> crStream(fname, std::ios_base::in | std::ios_base::binary);
+    std::string data((std::istreambuf_iterator<char>(crStream)),
+                 std::istreambuf_iterator<char>());
+    std::istringstream istrm(data);
     return ReadFst<FstClass>(istrm, fname);
   } else {
-    return ReadFst<FstClass>(std::cin, "standard input");
+    crypt_stdistream<char> crStream;
+    std::string data((std::istreambuf_iterator<char>(crStream)),
+                 std::istreambuf_iterator<char>());
+    std::istringstream istrm(data);
+    return ReadFst<FstClass>(istrm, "standard input");
   }
 }
 
@@ -85,10 +94,17 @@ bool FstClass::WeightTypesMatch(const WeightClass &weight,
 MutableFstClass *MutableFstClass::Read(const string &fname, bool convert) {
   if (convert == false) {
     if (!fname.empty()) {
-      std::ifstream in(fname, std::ios_base::in | std::ios_base::binary);
-      return ReadFst<MutableFstClass>(in, fname);
+      crypt_ifstream<char> crStream(fname, std::ios_base::in | std::ios_base::binary);
+      std::string data((std::istreambuf_iterator<char>(crStream)),
+                 std::istreambuf_iterator<char>());
+      std::istringstream strm(data);
+      return ReadFst<MutableFstClass>(strm, fname);
     } else {
-      return ReadFst<MutableFstClass>(std::cin, "standard input");
+      crypt_stdistream<char> crStream;
+      std::string data((std::istreambuf_iterator<char>(crStream)),
+                 std::istreambuf_iterator<char>());
+      std::istringstream istrm(data);
+      return ReadFst<MutableFstClass>(istrm, "standard input");
     }
   } else {  // Converts to VectorFstClass if not mutable.
     FstClass *ifst = FstClass::Read(fname);

@@ -447,7 +447,7 @@ bool DefaultCompactStore<Element, Unsigned>::Write(
     return false;
   }
   strm.write(reinterpret_cast<char *>(compacts_), ncompacts_ * sizeof(Element));
-  strm.flush();
+  // strm.flush();
   if (!strm) {
     LOG(ERROR) << "DefaultCompactStore::Write: Write failed: " << opts.source;
     return false;
@@ -1246,7 +1246,7 @@ bool CompactFst<A, ArcCompactor, Unsigned, CompactStore, CacheStore>::WriteFst(
       strm.write(reinterpret_cast<const char *>(&element), sizeof(element));
     }
   }
-  strm.flush();
+  // strm.flush();
   if (!strm) {
     LOG(ERROR) << "CompactFst write failed: " << opts.source;
     return false;

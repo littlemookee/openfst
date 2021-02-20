@@ -95,7 +95,7 @@ fst/script/synchronize.h fst/script/text-io.h fst/script/topsort.h \
 fst/script/union.h fst/script/weight-class.h fst/script/fstscript-decl.h \
 fst/script/verify.h
 
-nobase_include_HEADERS = fst/arc-arena.h fst/arc.h fst/determinize.h \
+nobase_include_HEADERS = fst/shm.h fst/arc-arena.h fst/arc.h fst/determinize.h \
 fst/intersect.h fst/queue.h fst/statesort.h fst/arcfilter.h fst/dfs-visit.h \
 fst/invert.h fst/randequivalent.h fst/string-weight.h fst/difference.h \
 fst/lexicographic-weight.h fst/randgen.h fst/symbol-table.h fst/arcsort.h \

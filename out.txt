@@ -1,0 +1,99 @@
+На ветке win-fixes
+Ваша ветка обновлена в соответствии с «origin/win-fixes».
+
+Изменения, которые не в индексе для коммита:
+  (используйте «git add <файл>…», чтобы добавить файл в индекс)
+  (use "git restore <file>..." to discard changes in working directory)
+	изменено:      .gitignore
+	изменено:      Makefile.in
+	изменено:      configure
+	изменено:      configure.ac
+	изменено:      m4/ac_python_devel.m4
+	изменено:      src/Makefile.in
+	изменено:      src/bin/Makefile.am
+	изменено:      src/bin/Makefile.in
+	изменено:      src/bin/fstcompile.cc
+	изменено:      src/bin/fstprint.cc
+	изменено:      src/extensions/Makefile.in
+	изменено:      src/extensions/compact/Makefile.in
+	изменено:      src/extensions/compress/Makefile.in
+	изменено:      src/extensions/const/Makefile.in
+	изменено:      src/extensions/far/Makefile.am
+	изменено:      src/extensions/far/Makefile.in
+	изменено:      src/extensions/linear/Makefile.in
+	изменено:      src/extensions/lookahead/Makefile.in
+	изменено:      src/extensions/mpdt/Makefile.in
+	изменено:      src/extensions/ngram/Makefile.in
+	изменено:      src/extensions/pdt/Makefile.in
+	изменено:      src/extensions/python/Makefile.am
+	изменено:      src/extensions/python/Makefile.in
+	изменено:      src/extensions/python/fst.pxd
+	изменено:      src/extensions/python/pywrapfst.pyx
+	изменено:      src/extensions/special/Makefile.in
+	изменено:      src/include/Makefile.am
+	изменено:      src/include/Makefile.in
+	изменено:      src/include/fst/compact-fst.h
+	изменено:      src/include/fst/config.h
+	изменено:      src/include/fst/const-fst.h
+	изменено:      src/include/fst/edit-fst.h
+	изменено:      src/include/fst/encode.h
+	изменено:      src/include/fst/expanded-fst.h
+	изменено:      src/include/fst/extensions/ngram/ngram-fst.h
+	изменено:      src/include/fst/flags.h
+	изменено:      src/include/fst/fst.h
+	изменено:      src/include/fst/generic-register.h
+	изменено:      src/include/fst/label-reachable.h
+	изменено:      src/include/fst/matcher-fst.h
+	изменено:      src/include/fst/mutable-fst.h
+	изменено:      src/include/fst/properties.h
+	изменено:      src/include/fst/symbol-table.h
+	изменено:      src/include/fst/types.h
+	изменено:      src/include/fst/vector-fst.h
+	изменено:      src/lib/Makefile.am
+	изменено:      src/lib/Makefile.in
+	изменено:      src/lib/libfst.vcxproj
+	изменено:      src/lib/libfst.vcxproj.filters
+	изменено:      src/lib/mapped-file.cc
+	изменено:      src/lib/symbol-table.cc
+	изменено:      src/script/Makefile.am
+	изменено:      src/script/Makefile.in
+	изменено:      src/script/fst-class.cc
+	изменено:      src/test/Makefile.in
+	изменено:      src/test/fst_test.cc
+	изменено:      src/test/fst_test.h
+
+Неотслеживаемые файлы:
+  (используйте «git add <файл>…», чтобы добавить в то, что будет включено в коммит)
+	.cproject
+	.project
+	Makefile
+	autom4te.cache/
+	config.h.in~
+	lib/
+	openfst.patch
+	openfst_crypt.patch
+	out.txt
+	src/Makefile
+	src/bin/Makefile
+	src/bin/test2.cpp
+	src/extensions/Makefile
+	src/extensions/compact/Makefile
+	src/extensions/compress/Makefile
+	src/extensions/const/Makefile
+	src/extensions/far/Makefile
+	src/extensions/linear/Makefile
+	src/extensions/lookahead/Makefile
+	src/extensions/mpdt/Makefile
+	src/extensions/ngram/Makefile
+	src/extensions/pdt/Makefile
+	src/extensions/python/Makefile
+	src/extensions/special/Makefile
+	src/include/Makefile
+	src/include/fst/shm.h
+	src/lib/Makefile
+	src/lib/shm.cc
+	src/script/Makefile
+	src/test/Makefile
+
+нет изменений добавленных для коммита
+(используйте «git add» и/или «git commit -a»)

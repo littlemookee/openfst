@@ -2083,7 +2083,7 @@ cdef class _MutableFst(_Fst):
     Returns:
       self.
     """
-    self._minimize(delta)
+    self._minimize(delta, allow_nondet)
     return self
 
   cpdef MutableArcIterator mutable_arcs(self, int64 state):

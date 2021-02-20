@@ -38,4 +38,17 @@ using uint64 = uint64_t;
 using ssize_t = std::ptrdiff_t;
 #endif  // _MSC_VER
 
+#ifdef _MSC_VER
+#ifdef OPENFSTSTATIC
+    #define OPENFSTDLL
+#elif OPENFSTEXPORT
+    #define  OPENFSTDLL  __declspec(dllexport)
+#else
+    #define  OPENFSTDLL __declspec(dllimport)
+#endif
+#else
+#define OPENFSTDLL
+#endif
+
+
 #endif  // FST_LIB_TYPES_H_

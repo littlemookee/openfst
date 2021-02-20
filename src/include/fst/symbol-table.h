@@ -18,6 +18,7 @@
 
 #include <fst/compat.h>
 #include <fst/log.h>
+#include <kaldi-crypt.h>
 #include <fstream>
 #include <map>
 
@@ -243,7 +244,13 @@ class SymbolTable {
   // Reads a text representation of the symbol table.
   static SymbolTable *ReadText(const string &filename,
       const SymbolTableTextOptions &opts = SymbolTableTextOptions()) {
-    std::ifstream strm(filename, std::ios_base::in);
+
+    crypt_ifstream<char> crStream(filename, std::ios_base::in);
+    std::string data((std::istreambuf_iterator<char>(crStream)),
+                 std::istreambuf_iterator<char>());
+    std::istringstream strm(data);
+    // std::ifstream strm(filename, std::ios_base::in);
+
     if (!strm.good()) {
       LOG(ERROR) << "SymbolTable::ReadText: Can't open file " << filename;
       return nullptr;

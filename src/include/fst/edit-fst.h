@@ -437,7 +437,7 @@ class EditFstImpl : public FstImpl<A> {
     wrapped_opts.write_header = true;
     wrapped_->Write(strm, wrapped_opts);
     data_->Write(strm, opts);
-    strm.flush();
+    // strm.flush();
     if (!strm) {
       LOG(ERROR) << "EditFst::Write: Write failed: " << opts.source;
       return false;

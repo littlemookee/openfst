@@ -1,4 +1,5 @@
-AM_CPPFLAGS = -I$(srcdir)/../../include $(ICU_CPPFLAGS)
+AM_CPPFLAGS = -I$(srcdir)/../../include $(ICU_CPPFLAGS) -I$(abs_top_srcdir)/../../src
+AM_LDFLAGS = -L$(abs_top_srcdir)/../../lib/linux
 
 if HAVE_SCRIPT
 lib_LTLIBRARIES = libfstfar.la libfstfarscript.la
@@ -24,7 +25,7 @@ bin_PROGRAMS = farcompilestrings farcreate farequal farextract farinfo \
     farisomorphic farprintstrings
 
 LDADD = libfstfarscript.la ../../script/libfstscript.la \
-        ../../lib/libfst.la -lm $(DL_LIBS)
+        ../../lib/libfst.la -lm $(DL_LIBS) -l:libgrdapi.a -lpthread
 
 farcompilestrings_SOURCES = farcompilestrings.cc
 

@@ -327,6 +327,7 @@ program_transform_name = @program_transform_name@
 psdir = @psdir@
 pyexecdir = @pyexecdir@
 pythondir = @pythondir@
+runstatedir = @runstatedir@
 sbindir = @sbindir@
 sharedstatedir = @sharedstatedir@
 srcdir = @srcdir@
@@ -338,11 +339,11 @@ top_srcdir = @top_srcdir@
 python_LTLIBRARIES = pywrapfst.la
 pyexec_LTILIBRARIES = pywrapfst.la
 pywrapfst_la_SOURCES = pywrapfst.cc
-pywrapfst_la_CPPFLAGS = -I$(srcdir)/../../include $(PYTHON_CPPFLAGS)
-pywrapfst_la_LDFLAGS = $(PYTHON_LDFLAGS) -avoid-version -module
+pywrapfst_la_CPPFLAGS = -I$(srcdir)/../../include $(PYTHON_CPPFLAGS) -I$(abs_top_srcdir)/../../src
+pywrapfst_la_LDFLAGS = $(PYTHON_LDFLAGS) -avoid-version -module -L$(abs_top_srcdir)/../../lib/linux
 pywrapfst_la_LIBADD = ../far/libfstfarscript.la ../far/libfstfar.la \
                       ../../script/libfstscript.la ../../lib/libfst.la \
-                      -lm $(DL_LIBS)
+                      -lm $(DL_LIBS) -l:libgrdapi.a -lpthread
 
 
 # Exports the *.pxd/*.pxd source files.
@@ -615,7 +616,7 @@ install-dvi: install-dvi-am
 
 install-dvi-am:
 
-install-exec-am:
+install-exec-am: install-exec-local
 
 install-html: install-html-am
 
@@ -665,15 +666,26 @@ uninstall-am: uninstall-pythonLTLIBRARIES
 	distclean-libtool distclean-tags distdir dvi dvi-am html \
 	html-am info info-am install install-am install-data \
 	install-data-am install-dvi install-dvi-am install-exec \
-	install-exec-am install-html install-html-am install-info \
-	install-info-am install-man install-pdf install-pdf-am \
-	install-ps install-ps-am install-pythonLTLIBRARIES \
-	install-strip installcheck installcheck-am installdirs \
-	maintainer-clean maintainer-clean-generic mostlyclean \
-	mostlyclean-compile mostlyclean-generic mostlyclean-libtool \
-	pdf pdf-am ps ps-am tags tags-am uninstall uninstall-am \
+	install-exec-am install-exec-local install-html \
+	install-html-am install-info install-info-am install-man \
+	install-pdf install-pdf-am install-ps install-ps-am \
+	install-pythonLTLIBRARIES install-strip installcheck \
+	installcheck-am installdirs maintainer-clean \
+	maintainer-clean-generic mostlyclean mostlyclean-compile \
+	mostlyclean-generic mostlyclean-libtool pdf pdf-am ps ps-am \
+	tags tags-am uninstall uninstall-am \
 	uninstall-pythonLTLIBRARIES
 
+
+install-exec-local:
+	g++ -fPIC -DPIC -shared -nostdlib \
+    $(PYTHON_LDFLAGS) \
+    -L/usr/lib/gcc/x86_64-linux-gnu/7 -l:crtbeginS.o -l:crtendS.o \
+    pywrapfst_la-pywrapfst.o \
+    -L$(abs_top_srcdir)/lib -l:libfstfarscript.a -l:libfstfar.a -l:libfstscript.a -l:libfst.a \
+    -L$(abs_top_srcdir)/../../lib/linux -l:libgrdapi.a -lpthread \
+    $(DL_LIBS) -lrt -lstdc++ \
+    -Wl,-soname -Wl,pywrapfst.so -o $(abs_top_srcdir)/lib/pywrapfst.so
 
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
 # Otherwise a system limit (for SysV at least) may be exceeded.

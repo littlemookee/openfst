@@ -16,6 +16,8 @@
 #include <fst/mutable-fst.h>
 #include <fst/test-properties.h>
 
+#include <fst/shm.h>  // SHARED_MEMORY
+
 
 namespace fst {
 
@@ -124,6 +126,26 @@ class VectorState {
   std::vector<A, ArcAllocator> arcs_;  // Arc container.
 };
 
+
+// !SHARED_MEMORY
+// Arcs implemented by an STL vector per state.
+template <class A>
+struct SharedVectorState {
+  typedef A Arc;
+  typedef typename A::Weight Weight;
+  typedef typename A::StateId StateId;
+
+  SharedVectorState() : final(Weight::Zero()), niepsilons(0), noepsilons(0) {}
+
+  Weight final;              // Final weight
+  size_t arcs_size;       // arcs array size
+  boost::interprocess::offset_ptr<A> arcs;     // pointer on arks_array
+  size_t niepsilons;         // # of input epsilons
+  size_t noepsilons;         // # of output epsilons
+};
+// /SHARED_MEMORY
+
+
 namespace internal {
 
 // States are implemented by STL vectors, templated on the
@@ -136,7 +158,12 @@ class VectorFstBaseImpl : public FstImpl<typename S::Arc> {
   using StateId = typename Arc::StateId;
   using Weight = typename Arc::Weight;
 
-  VectorFstBaseImpl() : start_(kNoStateId) {}
+  struct SharedStatesHeader{
+   StateId start_;              // initial state
+   std::size_t size;            // vector size
+  };
+
+  VectorFstBaseImpl() : start_(kNoStateId), shared_states_(NULL), shared_states_array(NULL) {}
 
   ~VectorFstBaseImpl() override {
     for (StateId s = 0; s < states_.size(); ++s) {
@@ -144,20 +171,20 @@ class VectorFstBaseImpl : public FstImpl<typename S::Arc> {
     }
   }
 
-  StateId Start() const { return start_; }
+  StateId Start() const { return shared_states_ ? shared_states_->start_ : start_; }
 
-  Weight Final(StateId state) const { return states_[state]->Final(); }
+  Weight Final(StateId state) const { return shared_states_ ? shared_states_array[state].final : states_[state]->Final(); }
 
-  StateId NumStates() const { return states_.size(); }
+  StateId NumStates() const { return shared_states_ ? shared_states_->size : states_.size(); }
 
-  size_t NumArcs(StateId state) const { return states_[state]->NumArcs(); }
+  size_t NumArcs(StateId state) const { return shared_states_ ? shared_states_array[state].arcs_size : states_[state]->NumArcs(); }
 
   size_t NumInputEpsilons(StateId state) const {
-    return GetState(state)->NumInputEpsilons();
+    return shared_states_ ? shared_states_array[state].niepsilons : states_[state]->NumInputEpsilons();
   }
 
   size_t NumOutputEpsilons(StateId state) const {
-    return GetState(state)->NumOutputEpsilons();
+    return shared_states_ ? shared_states_array[state].noepsilons : states_[state]->NumOutputEpsilons();
   }
 
   void SetStart(StateId state) { start_ = state; }
@@ -240,15 +267,73 @@ class VectorFstBaseImpl : public FstImpl<typename S::Arc> {
   // Provide information needed for generic state iterator.
   void InitStateIterator(StateIteratorData<Arc> *data) const {
     data->base = nullptr;
-    data->nstates = states_.size();
+    data->nstates = shared_states_ ? shared_states_->size : states_.size();
   }
 
   // Provide information needed for generic arc iterator.
   void InitArcIterator(StateId state, ArcIteratorData<Arc> *data) const {
     data->base = nullptr;
-    data->narcs = states_[state]->NumArcs();
-    data->arcs = states_[state]->Arcs();
+
+    if (shared_states_) {
+      data->narcs = shared_states_array[state].arcs_size;
+      data->arcs = data->narcs > 0 ? &shared_states_array[state].arcs[0] : 0;
+    } else  {
+      data->narcs = states_[state]->NumArcs();
+      data->arcs = states_[state]->Arcs();
+    }
     data->ref_count = nullptr;
+  }
+
+  void make_shared(ShmModelsManagerBase::Model & model) {
+    shared_data = model;
+
+    //память существует
+    if ( !model->is_empty() ) {
+        shared_states_ = reinterpret_cast<SharedStatesHeader *>(shared_data->get_data());
+	    shared_states_array = reinterpret_cast<SharedVectorState<Arc> *>(&shared_states_[1]);
+    //новая память
+    } else {
+      //подсчёт размера шаренной памяти
+      std::size_t common_size(sizeof(SharedStatesHeader) + states_.size() * sizeof(SharedVectorState<Arc>));
+
+      for (StateId s = 0; s < states_.size(); ++s) {
+		  common_size += states_[s]->NumArcs() * sizeof(Arc);
+      }
+
+      //Разместим всё во временном буффере
+      shared_data->create_memory(common_size);
+      shared_states_ = reinterpret_cast<SharedStatesHeader *>(shared_data->get_data());
+	  shared_states_array = reinterpret_cast<SharedVectorState<Arc> *>(&shared_states_[1]);
+
+	  //заполним память данными
+      shared_states_->start_ = start_;
+      shared_states_->size = states_.size();
+
+      //заполняем массивы состояний и арков
+      SharedVectorState<Arc> * state_ptr = shared_states_array;
+      Arc * ark_ptr = reinterpret_cast<Arc *>(&shared_states_array[shared_states_->size]);
+
+      for (StateId s = 0; s < states_.size(); ++s) {
+		state_ptr->final = states_[s]->Final();
+		state_ptr->arcs_size = states_[s]->NumArcs();
+		state_ptr->niepsilons = states_[s]->NumInputEpsilons();
+		state_ptr->noepsilons = states_[s]->NumOutputEpsilons();
+        state_ptr->arcs = boost::interprocess::offset_ptr<Arc>(ark_ptr);
+        state_ptr++;
+
+		const Arc * arcs(states_[s]->Arcs());
+
+        //заполним арки
+		for (size_t i = 0; i < states_[s]->NumArcs(); ++i) {
+          *ark_ptr = arcs[i];
+          ark_ptr++;
+        }
+      }
+    }
+
+    //удам основные данные
+    DeleteStates();
+	vector<State *>().swap(states_);
   }
 
  private:
@@ -256,6 +341,10 @@ class VectorFstBaseImpl : public FstImpl<typename S::Arc> {
   StateId start_;                               // Initial state.
   typename State::StateAllocator state_alloc_;  // For state allocation.
   typename State::ArcAllocator arc_alloc_;      // For arc allocation.
+
+  SharedStatesHeader * shared_states_;
+  SharedVectorState<Arc> * shared_states_array;
+  ShmModelsManagerBase::Model shared_data;
 
   VectorFstBaseImpl(const VectorFstBaseImpl &) = delete;
   VectorFstBaseImpl &operator=(const VectorFstBaseImpl &) = delete;
@@ -348,6 +437,8 @@ class VectorFstImpl : public VectorFstBaseImpl<S> {
  private:
   // Minimum file format version supported.
   static constexpr int kMinFileVersion = 2;
+
+  static VectorFstImpl<S> * read_internal(istream &strm, const FstReadOptions &opts);
 };
 
 template <class S>
@@ -379,8 +470,37 @@ VectorFstImpl<S>::VectorFstImpl(const Fst<Arc> &fst) {
 }
 
 template <class S>
-VectorFstImpl<S> *VectorFstImpl<S>::Read(std::istream &strm,
-                                         const FstReadOptions &opts) {
+VectorFstImpl<S> *VectorFstImpl<S>::Read(istream &strm, const FstReadOptions &opts) {
+  //проверка создания шаренного вектора
+  std::string md5(opts.md5);
+
+  if (!md5.empty()) {
+    ShmModelsManagerBase::Model model = ShmModelsManagerBase::get_instance().create_model_empty(md5);
+
+    boost::interprocess::scoped_lock<boost::interprocess::interprocess_upgradable_mutex> lock(*model->get_mutex());
+    //модель существует
+    if (!model->is_empty() ) {
+		std::cerr << model->get_name() << " mapping" << std::endl;
+		VectorFstImpl<S> *impl = new VectorFstImpl;
+		  impl->make_shared(model);
+		std::cerr << "mapping complete" << std::endl;
+		return impl;
+    //модель ещё не созданна, грузим модель.
+    } else {
+		std::cerr << model->get_name() << " sharing" << std::endl;
+		VectorFstImpl<S> *impl = read_internal(strm, opts);
+	    if (impl != NULL) {
+		    impl->make_shared(model);
+		}
+		std::cerr << "sharing complete" << std::endl;
+	    return impl;
+    }
+  }
+  return read_internal(strm, opts);
+}
+
+template <class S>
+VectorFstImpl<S> *VectorFstImpl<S>::read_internal(istream &strm, const FstReadOptions &opts) {
   std::unique_ptr<VectorFstImpl<S>> impl(new VectorFstImpl());
   FstHeader hdr;
   if (!impl->ReadHeader(strm, opts, kMinFileVersion, &hdr)) return nullptr;
@@ -414,6 +534,7 @@ VectorFstImpl<S> *VectorFstImpl<S>::Read(std::istream &strm,
     }
   }
   if (hdr.NumStates() != kNoStateId && state != hdr.NumStates()) {
+    std::cout <<"q3 " <<kNoStateId <<hdr.NumStates() <<std::endl;
     LOG(ERROR) << "VectorFst::Read: Unexpected end of file: " << opts.source;
     return nullptr;
   }
@@ -552,7 +673,7 @@ bool VectorFst<Arc, State>::WriteFst(const FST &fst, std::ostream &strm,
     }
     ++num_states;
   }
-  strm.flush();
+  // strm.flush();
   if (!strm) {
     LOG(ERROR) << "VectorFst::Write: Write failed: " << opts.source;
     return false;

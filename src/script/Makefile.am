@@ -1,4 +1,4 @@
-AM_CPPFLAGS = -I$(srcdir)/../include $(ICU_CPPFLAGS)
+AM_CPPFLAGS = -I$(srcdir)/../include $(ICU_CPPFLAGS) -I$(abs_top_srcdir)/../../src
 
 if HAVE_SCRIPT
 lib_LTLIBRARIES = libfstscript.la

@@ -48,11 +48,11 @@ using std::string;
 //
 // ShowUsage() can be used to print out command and flag usage.
 
-#define DECLARE_bool(name) extern bool FLAGS_ ## name
-#define DECLARE_string(name) extern string FLAGS_ ## name
-#define DECLARE_int32(name) extern int32 FLAGS_ ## name
-#define DECLARE_int64(name) extern int64 FLAGS_ ## name
-#define DECLARE_double(name) extern double FLAGS_ ## name
+#define DECLARE_bool(name) extern OPENFSTDLL bool FLAGS_ ## name
+#define DECLARE_string(name) extern OPENFSTDLL string FLAGS_ ## name
+#define DECLARE_int32(name) extern OPENFSTDLL int32 FLAGS_ ## name
+#define DECLARE_int64(name) extern OPENFSTDLL int64 FLAGS_ ## name
+#define DECLARE_double(name) extern OPENFSTDLL double FLAGS_ ## name
 
 template <typename T>
 struct FlagDescription {
@@ -74,7 +74,7 @@ struct FlagDescription {
 template <typename T>
 class FlagRegister {
  public:
-  static FlagRegister<T> *GetRegister() {
+  static OPENFSTDLL FlagRegister<T> *GetRegister() {
     static auto reg = new FlagRegister<T>;
     return reg;
   }

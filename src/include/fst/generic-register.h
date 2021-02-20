@@ -33,15 +33,19 @@
 
 namespace fst {
 
+
 template <class KeyType, class EntryType, class RegisterType>
 class GenericRegister {
  public:
   using Key = KeyType;
   using Entry = EntryType;
 
-  static RegisterType *GetRegister() {
-    static auto reg = new RegisterType;
-    return reg;
+  static OPENFSTDLL RegisterType *GetRegister() {
+      static auto reg = new RegisterType;
+      return reg;
+//    if (register_ == nullptr)
+//        register_ = new RegisterType;
+//    return register_;
   }
 
   void SetEntry(const KeyType &key, const EntryType &entry) {
@@ -103,9 +107,16 @@ class GenericRegister {
   }
 
  private:
+//  static OPENFSTDLL RegisterType * register_;
   mutable Mutex register_lock_;
   std::map<KeyType, EntryType> register_table_;
 };
+
+
+//#if defined OPENFSTEXPORT || defined OPENFSTSTATIC
+//template <class KeyType, class EntryType, class RegisterType>
+//RegisterType * GenericRegister<KeyType, EntryType, RegisterType>::register_ = nullptr;
+//#endif
 
 // Generic register-er class capable of creating new register entries in the
 // given RegisterType template parameter. This type must define types Key and

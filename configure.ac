@@ -5,7 +5,7 @@ AM_PROG_AR
 # OpenFst does not throw exceptions, so we do not generate exception handling
 # code. However, users are free to re-enable exception handling.
 # OpenFst assumes char is unsigned; -fsigned-char is likely unsafe.
-CPPFLAGS="$CPPFLAGS -fno-exceptions -funsigned-char"
+CPPFLAGS="$CPPFLAGS -funsigned-char"
 CXXFLAGS="$CXXFLAGS -std=c++11"
 
 AC_PROG_CXX
