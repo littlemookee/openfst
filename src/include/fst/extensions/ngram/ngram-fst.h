@@ -112,7 +112,7 @@ class NGramFstImpl : public FstImpl<A> {
 		if (!model->is_empty() ) {
 			std::cerr << model->get_name() << " mapping" << std::endl;
 			NGramFstImpl<A> *impl = new NGramFstImpl(model);
-		  	impl->Init(reinterpret_cast<char*>(model->get_data()), true);
+		  	impl->Init(reinterpret_cast<char*>(model->get_data()), false);
 			std::cerr << "mapping complete" << std::endl;
 			return impl;
 		//модель ещё не создана, грузим модель.
