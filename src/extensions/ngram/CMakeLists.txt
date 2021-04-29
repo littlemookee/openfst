@@ -1,6 +1,12 @@
 file(GLOB HEADER_FILES ../../include/fst/extensions/ngram/*.h)
 message(STATUS "${HEADER_FILES}")
 
+include_directories(../../include; ../../../../kaldi-crypt/src ../../../../usr/include)
+
+link_directories(C:/proj/openfst/x64/Release; C:/proj/usr/lib.msvc140-x64; "C:/Program Files (x86)/Guardant/SDK7/Lib/windows/x64")
+
+add_definitions(-DNOMINMAX -DFST_NO_DYNAMIC_LINKING -DOPENFSTSTATIC)
+
 add_library(fstngram
     bitmap-index.cc 
     ngram-fst.cc 
@@ -35,7 +41,8 @@ set_target_properties(ngram_fst PROPERTIES
 )
 
 target_link_libraries(ngram_fst
-    fst
+    libfst
+    GrdAPI64
 )
 
 install(TARGETS ngram_fst
